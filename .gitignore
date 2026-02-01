@@ -1,0 +1,54 @@
+# Dependencies
+node_modules/
+.pnp/
+.pnp.js
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+web/.env
+worker/.env
+database/.env
+
+# Next.js
+web/.next/
+web/out/
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Testing
+coverage/
+.nyc_output/
+
+# Prisma
+*.db
+*.db-journal
+
+# OS
+Thumbs.db
+*.log
+
+# Misc
+*.pem
+.vercel
+
+# Test repos
+practicee/
