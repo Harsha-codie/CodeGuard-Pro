@@ -6,24 +6,11 @@ CodeGuard Pro is a GitHub App that automatically analyzes your pull requests for
 
 ## ✨ Features
 
-### Currently Working
 - **GitHub App Integration** - Receives webhooks on PR events
 - **Multi-Language Support** - JavaScript, TypeScript, Python, Java
 - **Security Violation Detection** - Detects common security issues
 - **PR Comments** - Posts inline review comments on violations
 - **Web Dashboard** - View projects, rules, and analysis history
-
-### Security Patterns Detected
-| Severity | Pattern |
-|----------|---------|
-| 🔴 CRITICAL | Hardcoded API keys, passwords, tokens, secrets |
-| 🔴 CRITICAL | eval()/exec() dangerous code execution |
-| 🔴 CRITICAL | document.write() XSS vulnerability |
-| 🔴 CRITICAL | SSL certificate verification disabled |
-| 🔴 CRITICAL | Pickle deserialization (Python) |
-| 🟡 WARNING | Weak cryptography (MD5, SHA1) |
-| 🟡 WARNING | Hardcoded URLs |
-| 🟡 WARNING | Insecure random number generation |
 
 ## 🚀 Quick Start
 
