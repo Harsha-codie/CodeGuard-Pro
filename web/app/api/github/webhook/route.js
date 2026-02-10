@@ -409,6 +409,16 @@ async function runInlineAnalysis(jobData) {
                     
                     // Add violation if found
                     if (violation) {
+                        // ── Violation Suppression ──
+                        // Check if the line or previous line has a codeguard-ignore comment
+                        const suppressionPattern = /\/\/\s*codeguard-ignore|#\s*codeguard-ignore|\/\*\s*codeguard-ignore\s*\*\/|\/\/\s*noqa/i;
+                        const prevLine = i > 0 ? lines[i - 1] : '';
+                        
+                        if (suppressionPattern.test(line) || suppressionPattern.test(prevLine)) {
+                            console.log(`[InlineAnalysis] SUPPRESSED: ${file.filename}:${lineNum} - ${violation.type} (codeguard-ignore)`);
+                            continue; // Skip this violation
+                        }
+
                         // Generate quick-fix suggestion if available
                         const fix = getQuickFix(violation.type, line, language);
                         
@@ -573,6 +583,29 @@ async function runInlineAnalysis(jobData) {
             }
         } catch (slackErr) {
             console.log('[InlineAnalysis] Slack notification failed:', slackErr.message);
+        }
+
+        // ── JIRA Ticket for Critical Violations ──
+        try {
+            const { createJiraTicket } = await import('../../../../lib/jira');
+            const ticket = await createJiraTicket({
+                repoOwner, repoName, prNumber, headSha,
+                violations: allViolations,
+            });
+            if (ticket) {
+                console.log(`[InlineAnalysis] JIRA ticket created: ${ticket.key} (${ticket.url})`);
+                // Post JIRA link as PR comment
+                try {
+                    await octokit.rest.issues.createComment({
+                        owner: repoOwner, repo: repoName, issue_number: prNumber,
+                        body: `🎫 **JIRA Ticket Created:** [${ticket.key}](${ticket.url})\n\n${allViolations.filter(v => v.severity === 'CRITICAL').length} critical violation(s) require attention.`,
+                    });
+                } catch (e) {
+                    console.log('[InlineAnalysis] Could not post JIRA link:', e.message);
+                }
+            }
+        } catch (jiraErr) {
+            console.log('[InlineAnalysis] JIRA integration skipped:', jiraErr.message);
         }
 
         console.log(`[InlineAnalysis] Completed. Found ${allViolations.length} violations.`);
