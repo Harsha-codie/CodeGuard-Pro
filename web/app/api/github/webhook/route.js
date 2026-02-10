@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { Octokit } from 'octokit';
 import { getInstallationOctokit } from '../../../../lib/github-app';
+import { rateLimitStrict } from '../../../../lib/rate-limit';
 
 const prisma = new PrismaClient();
 
@@ -408,7 +409,10 @@ async function runInlineAnalysis(jobData) {
                     
                     // Add violation if found
                     if (violation) {
-                        console.log(`[InlineAnalysis] FOUND: ${file.filename}:${lineNum} - ${violation.type}`);
+                        // Generate quick-fix suggestion if available
+                        const fix = getQuickFix(violation.type, line, language);
+                        
+                        console.log(`[InlineAnalysis] FOUND: ${file.filename}:${lineNum} - ${violation.type}${fix ? ' (fix available)' : ''}`);
                         allViolations.push({
                             ruleId: rule.id,
                             ruleName: rule.description.substring(0, 50),
@@ -416,7 +420,8 @@ async function runInlineAnalysis(jobData) {
                             severity: rule.severity,
                             filePath: file.filename,
                             line: lineNum,
-                            snippet: violation.match
+                            snippet: violation.match,
+                            fix: fix,
                         });
                     }
                 }
@@ -458,12 +463,17 @@ async function runInlineAnalysis(jobData) {
 
         // Post to GitHub PR
         if (allViolations.length > 0) {
-            // Group violations by file for PR review
-            const reviewComments = allViolations.slice(0, 20).map(v => ({
-                path: v.filePath,
-                line: v.line,
-                body: `⚠️ **${v.ruleName}**\n\n${v.message}\n\n\`\`\`\n${v.snippet}\n\`\`\``
-            }));
+            // Group violations by file for PR review, include fix suggestions
+            const reviewComments = allViolations.slice(0, 20).map(v => {
+                let body = `⚠️ **${v.ruleName}**\n\n${v.message}\n\n\`\`\`\n${v.snippet}\n\`\`\``;
+                
+                // Add quick-fix suggestion if available
+                if (v.fix) {
+                    body += `\n\n💡 **Quick Fix:**\n\`\`\`suggestion\n${v.fix}\n\`\`\``;
+                }
+                
+                return { path: v.filePath, line: v.line, body };
+            });
 
             try {
                 await octokit.rest.pulls.createReview({
@@ -578,6 +588,119 @@ async function runInlineAnalysis(jobData) {
     }
 }
 
+/**
+ * Generate quick-fix suggestions for detected violations.
+ * Returns the corrected line of code, or null if no auto-fix is available.
+ * These appear as GitHub suggestion blocks that developers can accept with one click.
+ */
+function getQuickFix(violationType, originalLine, language) {
+    const line = originalLine;
+    const indent = line.match(/^(\s*)/)[1]; // preserve indentation
+    
+    switch (violationType) {
+        // ── Weak Crypto Fixes ──
+        case 'Weak hash MD5':
+        case 'Weak hash SHA1':
+            return line.replace(/createHash\s*\(\s*["'](md5|sha1)["']\)/, 'createHash("sha256")');
+        
+        case 'Weak hash (Python)':
+            return line.replace(/hashlib\.(md5|sha1)\s*\(/, 'hashlib.sha256(');
+        
+        case 'Weak hash (Java)':
+            return line.replace(/MessageDigest\.getInstance\s*\(\s*["'](MD5|SHA-?1)["']\)/, 'MessageDigest.getInstance("SHA-256")');
+        
+        case 'Weak cipher algorithm':
+            return line.replace(/createCipher(iv)?\s*\(\s*["'](des|rc4|rc2|blowfish)["']/, 'createCipheriv("aes-256-cbc"');
+        
+        // ── Insecure Random Fixes ──
+        case 'Insecure random':
+            if (language === 'javascript' || language === 'typescript') {
+                return `${indent}crypto.randomBytes(32).toString('hex') // Use crypto.randomBytes for secure random`;
+            }
+            return null;
+        
+        case 'Insecure random (Python)':
+            return line.replace(/random\.(random|randint|choice|shuffle|uniform)\s*\(/, 'secrets.token_hex(');
+        
+        case 'Insecure random (Java)':
+            return line.replace(/new\s+Random\s*\(/, 'new SecureRandom(');
+        
+        // ── SSL Fixes ──
+        case 'SSL disabled':
+            return line.replace(/rejectUnauthorized\s*:\s*false/, 'rejectUnauthorized: true');
+        
+        case 'SSL verification disabled (Python)':
+            return line.replace(/verify\s*=\s*False/, 'verify=True');
+        
+        case 'SSL globally disabled':
+            return `${indent}// NODE_TLS_REJECT_UNAUTHORIZED should not be set to 0 in production`;
+        
+        // ── XSS Fixes ──
+        case 'XSS risk - innerHTML':
+            return line.replace(/\.innerHTML\s*=/, '.textContent =');
+        
+        case 'XSS risk - document.write':
+            return `${indent}// Use DOM manipulation instead: document.getElementById('id').textContent = content;`;
+        
+        // ── var → const ──
+        case 'Use const/let instead of var':
+            return line.replace(/\bvar\s+/, 'const ');
+        
+        // ── Debug Statement Fixes ──
+        case 'Debug statement in production':
+            return `${indent}// ${line.trim()} // TODO: Remove before production`;
+        
+        case 'Debugger statement':
+            return `${indent}// debugger; // Removed - do not use in production`;
+        
+        case 'Debug print() statement':
+            return line.replace(/\bprint\s*\(/, 'logging.debug(');
+        
+        // ── Insecure HTTP ──
+        case 'Insecure HTTP (use HTTPS)':
+            return line.replace(/http:\/\//, 'https://');
+        
+        // ── Command Injection Fixes ──
+        case 'Command injection (shell=True)':
+            return line.replace(/shell\s*=\s*True/, 'shell=False');
+        
+        case 'Command injection - os.system()':
+            return `${indent}subprocess.run([command], shell=False, check=True)  # Use subprocess instead of os.system`;
+        
+        // ── Empty Catch ──
+        case 'Empty catch block':
+            return `${indent}catch (error) { console.error('Unhandled error:', error); }`;
+        
+        case 'Bare except / swallowed error':
+            return `${indent}except Exception as e:\n${indent}    logging.error(f"Error: {e}")`;
+        
+        // ── Pickle ──
+        case 'Insecure pickle usage':
+            return `${indent}# Consider using json.loads() for safer deserialization`;
+        
+        // ── Deserialization ──
+        case 'Insecure YAML deserialization':
+            return line.replace(/yaml\.(load|unsafe_load)\s*\(/, 'yaml.safe_load(');
+        
+        // ── CORS ──
+        case 'CORS wildcard (*) - allows any origin':
+            return line.replace(/["']\*["']/, '"https://your-domain.com"');
+        
+        // ── Eval ──
+        case 'Dangerous eval()':
+            return `${indent}// eval() removed — use JSON.parse() or a safe alternative`;
+        
+        case 'Dynamic code execution':
+            return `${indent}// new Function() removed — avoid dynamic code execution`;
+        
+        case 'String-based timer (code injection)':
+            return line.replace(/(setTimeout|setInterval)\s*\(\s*["']/, '$1(() => ');
+        
+        default:
+            return null; // No auto-fix available for this violation type
+    }
+}
+
 // Extract regex patterns from tree-sitter queries (simplified)
 function extractPatternsFromQuery(query) {
     const patterns = [];
@@ -673,6 +796,10 @@ function extractPatternsFromQuery(query) {
  */
 export async function POST(request) {
     try {
+        // Rate limiting: 30 requests/minute per IP
+        const limited = rateLimitStrict(request);
+        if (limited) return limited;
+
         const signature = request.headers.get('x-hub-signature-256');
         const event = request.headers.get('x-github-event');
         const delivery = request.headers.get('x-github-delivery');
@@ -822,7 +949,34 @@ async function handlePullRequest(payload) {
             projectId: project.id,
         };
 
-        // Run inline analysis (no Redis needed)
+        // Try Redis queue first, fall back to inline analysis
+        if (process.env.REDIS_HOST || process.env.REDIS_URL) {
+            try {
+                const { Queue } = await import('bullmq');
+                const redisConnection = process.env.REDIS_URL 
+                    ? { url: process.env.REDIS_URL }
+                    : { host: process.env.REDIS_HOST || 'localhost', port: parseInt(process.env.REDIS_PORT || '6379'), password: process.env.REDIS_PASSWORD || undefined };
+                
+                const queue = new Queue('compliance-analysis', { connection: redisConnection });
+                const jobId = `pr-${repo.owner.login}-${repo.name}-${pr.number}-${pr.head.sha.slice(0, 7)}`;
+                await queue.add('analyze-pr', jobData, { jobId });
+                console.log(`[PR] Queued job ${jobId} via Redis`);
+                await queue.close();
+                
+                return {
+                    status: 'queued',
+                    analysisId: analysis.id,
+                    repo: repo.full_name,
+                    pr: pr.number,
+                    rulesCount: project.rules.length,
+                    mode: 'redis',
+                };
+            } catch (redisErr) {
+                console.log(`[PR] Redis unavailable (${redisErr.message}), falling back to inline`);
+            }
+        }
+
+        // Fallback: Run inline analysis (no Redis needed)
         console.log('[PR] Starting inline analysis...');
         runInlineAnalysis(jobData).catch(err => {
             console.error('[PR] Inline analysis error:', err);
