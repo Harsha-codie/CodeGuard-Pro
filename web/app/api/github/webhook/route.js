@@ -5,6 +5,21 @@ import { Octokit } from 'octokit';
 import { getInstallationOctokit } from '../../../../lib/github-app';
 import { rateLimitStrict } from '../../../../lib/rate-limit';
 
+// AST-based analyzer for precise code analysis
+let astAnalyzer = null;
+async function getASTAnalyzer() {
+    if (astAnalyzer) return astAnalyzer;
+    try {
+        // Dynamic import to avoid loading WASM at module level
+        astAnalyzer = await import('../../../../lib/ast-analyzer.js');
+        console.log('[AST] Analyzer loaded successfully');
+        return astAnalyzer;
+    } catch (e) {
+        console.warn('[AST] Analyzer not available:', e.message);
+        return null;
+    }
+}
+
 const prisma = new PrismaClient();
 
 // Default security rules to seed when a project is auto-created
@@ -89,6 +104,48 @@ async function runInlineAnalysis(jobData) {
                 console.log(`[InlineAnalysis] Could not fetch ${file.filename}: ${e.message}`);
                 continue;
             }
+
+            // ═══════════════════════════════════════════════════════════
+            // AST-BASED ANALYSIS (Primary - More Accurate)
+            // Uses Tree-sitter for precise pattern matching on 6 languages:
+            // JavaScript, TypeScript, Python, Java, Go, C
+            // ═══════════════════════════════════════════════════════════
+            try {
+                const analyzer = await getASTAnalyzer();
+                if (analyzer && analyzer.isASTSupported(language)) {
+                    const astResult = await analyzer.analyzeWithAST(content, file.filename, {
+                        language,
+                        categories: ['security', 'best-practice', 'performance'],
+                    });
+                    
+                    if (astResult.violations && astResult.violations.length > 0) {
+                        console.log(`[AST] Found ${astResult.violations.length} violations in ${file.filename}`);
+                        
+                        for (const v of astResult.violations) {
+                            allViolations.push({
+                                ruleId: v.ruleId || 'ast-' + v.ruleName,
+                                ruleName: v.ruleName,
+                                message: v.message,
+                                severity: v.severity === 'error' ? 'CRITICAL' : 
+                                         v.severity === 'warning' ? 'WARNING' : 'INFO',
+                                filePath: file.filename,
+                                line: v.line,
+                                snippet: v.snippet || v.lineText,
+                                fix: null, // AST violations don't have auto-fix yet
+                                engine: 'ast',
+                            });
+                        }
+                    }
+                }
+            } catch (astErr) {
+                console.warn(`[AST] Analysis failed for ${file.filename}:`, astErr.message);
+                // Continue with regex fallback
+            }
+
+            // ═══════════════════════════════════════════════════════════
+            // REGEX-BASED ANALYSIS (Fallback - Broader Coverage)
+            // Catches patterns not covered by AST queries + custom user rules
+            // ═══════════════════════════════════════════════════════════
 
             // Direct pattern matching for each rule
             // Rules are LANGUAGE-AGNOSTIC - same patterns work for JS, Python, Java, TS
@@ -438,7 +495,9 @@ async function runInlineAnalysis(jobData) {
             }
         }
 
-        console.log(`[InlineAnalysis] Found ${allViolations.length} violations`);
+        const astViolations = allViolations.filter(v => v.engine === 'ast').length;
+        const regexViolations = allViolations.length - astViolations;
+        console.log(`[InlineAnalysis] Found ${allViolations.length} violations (AST: ${astViolations}, Regex: ${regexViolations})`);
 
         // ── Set GitHub Commit Status (pending → success/failure) ──
         try {
