@@ -22,6 +22,21 @@ async function runInlineAnalysis(jobData) {
 
         const octokit = new Octokit({ auth: githubToken });
 
+        // ── Set commit status to "pending" ──
+        try {
+            await octokit.rest.repos.createCommitStatus({
+                owner: repoOwner,
+                repo: repoName,
+                sha: headSha,
+                state: 'pending',
+                description: 'CodeGuard is analyzing your code...',
+                context: 'CodeGuard Pro / Security Analysis',
+            });
+            console.log('[InlineAnalysis] Commit status set: pending');
+        } catch (e) {
+            console.log('[InlineAnalysis] Could not set pending status:', e.message);
+        }
+
         // Get changed files
         const { data: files } = await octokit.rest.pulls.listFiles({
             owner: repoOwner,
@@ -85,85 +100,301 @@ async function runInlineAnalysis(jobData) {
                     const lineNum = i + 1;
                     let violation = null;
                     
-                    // SSL/Certificate check
-                    if (ruleText.includes('ssl') || ruleText.includes('certificate')) {
+                    // ═══════════════════════════════════════════════
+                    // DETECTION PATTERNS (30+ security & code quality)
+                    // ═══════════════════════════════════════════════
+
+                    // ── 1. SSL/Certificate Verification Disabled ──
+                    if (ruleText.includes('ssl') || ruleText.includes('certificate') || ruleText.includes('tls')) {
                         if (/rejectUnauthorized\s*:\s*false/i.test(line)) {
                             violation = { match: 'rejectUnauthorized: false', type: 'SSL disabled' };
                         }
+                        // Python: verify=False
+                        if (/verify\s*=\s*False/.test(line) && /requests\.|urllib|http/i.test(line)) {
+                            violation = { match: line.trim().substring(0, 60), type: 'SSL verification disabled (Python)' };
+                        }
+                        // Java: TrustAllCerts
+                        if (/TrustAll|ALLOW_ALL_HOSTNAME|setHostnameVerifier/i.test(line)) {
+                            violation = { match: line.trim().substring(0, 60), type: 'SSL bypass (Java)' };
+                        }
+                        // Node.js env
+                        if (/NODE_TLS_REJECT_UNAUTHORIZED\s*=\s*["']?0/.test(line)) {
+                            violation = { match: 'NODE_TLS_REJECT_UNAUTHORIZED=0', type: 'SSL globally disabled' };
+                        }
                     }
                     
-                    // Hardcoded secrets/credentials
+                    // ── 2. Hardcoded Secrets/Credentials ──
                     if (ruleText.includes('api') || ruleText.includes('key') || ruleText.includes('password') || 
                         ruleText.includes('token') || ruleText.includes('secret') || ruleText.includes('credential')) {
-                        // Check for hardcoded secrets
                         if (/(api_?key|apikey|password|secret|token|auth|credential)\s*[=:]\s*["'][^"']{4,}["']/i.test(line)) {
                             violation = { match: line.trim().substring(0, 60), type: 'Hardcoded credential' };
                         }
                         if (/(API_?KEY|PASSWORD|SECRET|TOKEN|AUTH)\s*=\s*["'][^"']+["']/i.test(line)) {
                             violation = { match: line.trim().substring(0, 60), type: 'Hardcoded credential' };
                         }
-                        if (/["'](sk-|ghp_|xox[a-z]-|AKIA)[A-Za-z0-9]{10,}["']/i.test(line)) {
-                            violation = { match: line.trim().substring(0, 60), type: 'API key pattern' };
+                        // Known API key formats
+                        if (/["'](sk-|ghp_|gho_|ghu_|ghs_|xox[a-z]-|AKIA|AIza|pk_live_|sk_live_|rk_live_|sq0atp-|EAACEdEose)[A-Za-z0-9_\-]{8,}["']/i.test(line)) {
+                            violation = { match: line.trim().substring(0, 60), type: 'API key pattern detected' };
+                        }
+                        // Private keys
+                        if (/-----BEGIN\s+(RSA\s+)?PRIVATE\s+KEY-----/.test(line)) {
+                            violation = { match: 'Private key embedded in code', type: 'Private key exposure' };
+                        }
+                        // Connection strings with credentials
+                        if (/(mongodb|postgres|mysql|redis):\/\/[^:]+:[^@]+@/i.test(line)) {
+                            violation = { match: line.trim().substring(0, 60), type: 'Hardcoded connection string' };
                         }
                     }
                     
-                    // Weak crypto (MD5/SHA1)
-                    if (ruleText.includes('md5') || ruleText.includes('sha1') || ruleText.includes('crypto') || ruleText.includes('weak')) {
-                        if (/createHash\s*\(\s*["']md5["']/i.test(line)) {
-                            violation = { match: 'createHash("md5")', type: 'Weak hash MD5' };
+                    // ── 3. Weak Cryptography ──
+                    if (ruleText.includes('md5') || ruleText.includes('sha1') || ruleText.includes('crypto') || ruleText.includes('weak') || ruleText.includes('hash')) {
+                        // Node.js crypto
+                        if (/createHash\s*\(\s*["'](md5|sha1|md4|ripemd160)["']/i.test(line)) {
+                            const algo = line.match(/createHash\s*\(\s*["'](md5|sha1|md4|ripemd160)["']/i)[1];
+                            violation = { match: `createHash("${algo}")`, type: `Weak hash ${algo.toUpperCase()}` };
                         }
-                        if (/createHash\s*\(\s*["']sha1["']/i.test(line)) {
-                            violation = { match: 'createHash("sha1")', type: 'Weak hash SHA1' };
+                        // Python hashlib
+                        if (/hashlib\.(md5|sha1|md4)\s*\(/.test(line)) {
+                            violation = { match: line.trim().substring(0, 50), type: 'Weak hash (Python)' };
+                        }
+                        // Java MessageDigest
+                        if (/MessageDigest\.getInstance\s*\(\s*["'](MD5|SHA-?1|MD4)["']/i.test(line)) {
+                            violation = { match: line.trim().substring(0, 60), type: 'Weak hash (Java)' };
+                        }
+                        // DES / RC4 weak ciphers
+                        if (/createCipher(iv)?\s*\(\s*["'](des|rc4|rc2|blowfish)["']/i.test(line)) {
+                            violation = { match: line.trim().substring(0, 60), type: 'Weak cipher algorithm' };
                         }
                     }
                     
-                    // Hardcoded URLs
-                    if (ruleText.includes('url') || ruleText.includes('hardcod')) {
-                        if (/["']https?:\/\/[^"'\s]{10,}["']/.test(line) && !line.includes('localhost')) {
+                    // ── 4. Hardcoded URLs/IPs ──
+                    if (ruleText.includes('url') || ruleText.includes('hardcod') || ruleText.includes('ip')) {
+                        if (/["']https?:\/\/[^"'\s]{10,}["']/.test(line) && !line.includes('localhost') && !line.includes('127.0.0.1') && !line.includes('example.com') && !/^\s*\/\//.test(line) && !/^\s*\*/.test(line)) {
                             violation = { match: line.trim().substring(0, 60), type: 'Hardcoded URL' };
                         }
+                        // Hardcoded IP addresses
+                        if (/["']\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d+)?["']/.test(line) && !line.includes('127.0.0.1') && !line.includes('0.0.0.0')) {
+                            violation = { match: line.trim().substring(0, 60), type: 'Hardcoded IP address' };
+                        }
                     }
                     
-                    // Insecure random
+                    // ── 5. Insecure Random ──
                     if (ruleText.includes('random') || ruleText.includes('secure')) {
                         if (/Math\.random\s*\(/.test(line)) {
                             violation = { match: 'Math.random()', type: 'Insecure random' };
                         }
-                        // Python: random.random(), random.randint(), etc.
-                        if (/random\.(random|randint|choice|shuffle)\s*\(/.test(line)) {
+                        if (/random\.(random|randint|choice|shuffle|uniform)\s*\(/.test(line)) {
                             violation = { match: line.trim().substring(0, 50), type: 'Insecure random (Python)' };
                         }
-                    }
-                    
-                    // document.write
-                    if (ruleText.includes('document') || ruleText.includes('write') || ruleText.includes('xss')) {
-                        if (/document\.write\s*\(/.test(line)) {
-                            violation = { match: 'document.write()', type: 'XSS risk' };
+                        // Java
+                        if (/new\s+Random\s*\(/.test(line) && !/SecureRandom/.test(line)) {
+                            violation = { match: line.trim().substring(0, 50), type: 'Insecure random (Java)' };
                         }
                     }
                     
-                    // Python: eval() and exec()
-                    if (ruleText.includes('eval') || ruleText.includes('exec') || ruleText.includes('arbitrary')) {
-                        if (/\beval\s*\(/.test(line)) {
+                    // ── 6. XSS Risks ──
+                    if (ruleText.includes('document') || ruleText.includes('write') || ruleText.includes('xss') || ruleText.includes('innerhtml') || ruleText.includes('injection')) {
+                        if (/document\.write\s*\(/.test(line)) {
+                            violation = { match: 'document.write()', type: 'XSS risk - document.write' };
+                        }
+                        if (/\.innerHTML\s*=/.test(line) && !/sanitize|escape|purify/i.test(line)) {
+                            violation = { match: line.trim().substring(0, 60), type: 'XSS risk - innerHTML' };
+                        }
+                        if (/\.outerHTML\s*=/.test(line)) {
+                            violation = { match: line.trim().substring(0, 60), type: 'XSS risk - outerHTML' };
+                        }
+                        if (/dangerouslySetInnerHTML/i.test(line)) {
+                            violation = { match: line.trim().substring(0, 60), type: 'XSS risk - dangerouslySetInnerHTML' };
+                        }
+                    }
+                    
+                    // ── 7. Code Injection (eval/exec) ──
+                    if (ruleText.includes('eval') || ruleText.includes('exec') || ruleText.includes('arbitrary') || ruleText.includes('injection') || ruleText.includes('dynamic')) {
+                        if (/\beval\s*\(/.test(line) && !/^\s*\/\//.test(line)) {
                             violation = { match: 'eval()', type: 'Dangerous eval()' };
                         }
-                        if (/\bexec\s*\(/.test(line)) {
+                        if (/\bexec\s*\(/.test(line) && !/child_process|\.exec\(\)/.test(line)) {
                             violation = { match: 'exec()', type: 'Dangerous exec()' };
+                        }
+                        // new Function() constructor
+                        if (/new\s+Function\s*\(/.test(line)) {
+                            violation = { match: 'new Function()', type: 'Dynamic code execution' };
+                        }
+                        // setTimeout/setInterval with string
+                        if (/(setTimeout|setInterval)\s*\(\s*["']/.test(line)) {
+                            violation = { match: line.trim().substring(0, 60), type: 'String-based timer (code injection)' };
+                        }
+                        // Python: compile + exec
+                        if (/\bcompile\s*\(.*["']exec["']/.test(line)) {
+                            violation = { match: line.trim().substring(0, 50), type: 'Dynamic code compilation' };
                         }
                     }
                     
-                    // Python: pickle
-                    if (ruleText.includes('pickle')) {
+                    // ── 8. Pickle Deserialization (Python) ──
+                    if (ruleText.includes('pickle') || ruleText.includes('deserializ') || ruleText.includes('untrusted')) {
                         if (/pickle\.(load|loads)\s*\(/.test(line)) {
                             violation = { match: line.trim().substring(0, 50), type: 'Insecure pickle usage' };
                         }
+                        if (/yaml\.(load|unsafe_load)\s*\(/.test(line) && !/SafeLoader|safe_load/.test(line)) {
+                            violation = { match: line.trim().substring(0, 50), type: 'Insecure YAML deserialization' };
+                        }
+                        // Java: ObjectInputStream
+                        if (/ObjectInputStream|readObject\s*\(/.test(line)) {
+                            violation = { match: line.trim().substring(0, 60), type: 'Insecure Java deserialization' };
+                        }
                     }
                     
-                    // Python: hashlib MD5/SHA1
-                    if (ruleText.includes('md5') || ruleText.includes('sha1') || ruleText.includes('crypto') || ruleText.includes('weak')) {
-                        // Python hashlib
-                        if (/hashlib\.(md5|sha1)\s*\(/.test(line)) {
-                            violation = { match: line.trim().substring(0, 50), type: 'Weak hash (Python)' };
+                    // ── 9. SQL Injection ──
+                    if (ruleText.includes('sql') || ruleText.includes('injection') || ruleText.includes('query') || ruleText.includes('concatenat')) {
+                        // String concatenation in SQL
+                        if (/(SELECT|INSERT|UPDATE|DELETE|DROP|ALTER)\s+.*\+\s*(req\.|user|input|param|args)/i.test(line)) {
+                            violation = { match: line.trim().substring(0, 60), type: 'SQL injection risk' };
+                        }
+                        // Template literals in SQL
+                        if (/(SELECT|INSERT|UPDATE|DELETE)\s+.*\$\{/i.test(line)) {
+                            violation = { match: line.trim().substring(0, 60), type: 'SQL injection via template literal' };
+                        }
+                        // Python f-string SQL
+                        if (/f["'].*?(SELECT|INSERT|UPDATE|DELETE)\s+.*\{/i.test(line)) {
+                            violation = { match: line.trim().substring(0, 60), type: 'SQL injection via f-string' };
+                        }
+                        // Python string format SQL  
+                        if (/(SELECT|INSERT|UPDATE|DELETE).*\.format\s*\(/i.test(line)) {
+                            violation = { match: line.trim().substring(0, 60), type: 'SQL injection via .format()' };
+                        }
+                    }
+                    
+                    // ── 10. Command Injection ──
+                    if (ruleText.includes('command') || ruleText.includes('shell') || ruleText.includes('injection') || ruleText.includes('exec')) {
+                        // child_process.exec with user input
+                        if (/child_process|\.exec\s*\(.*(\$\{|req\.|user|input|param)/i.test(line)) {
+                            violation = { match: line.trim().substring(0, 60), type: 'Command injection risk' };
+                        }
+                        // Python subprocess with shell=True
+                        if (/subprocess\.(call|run|Popen)\s*\(.*shell\s*=\s*True/i.test(line)) {
+                            violation = { match: line.trim().substring(0, 60), type: 'Command injection (shell=True)' };
+                        }
+                        // Python os.system
+                        if (/os\.system\s*\(/.test(line)) {
+                            violation = { match: line.trim().substring(0, 50), type: 'Command injection - os.system()' };
+                        }
+                        // Java Runtime.exec
+                        if (/Runtime\.getRuntime\(\)\.exec\s*\(/.test(line)) {
+                            violation = { match: line.trim().substring(0, 60), type: 'Command injection (Java)' };
+                        }
+                    }
+                    
+                    // ── 11. CORS Misconfiguration ──
+                    if (ruleText.includes('cors') || ruleText.includes('origin') || ruleText.includes('access-control')) {
+                        if (/Access-Control-Allow-Origin['":\s]*\*/.test(line) || /origin\s*:\s*["']\*["']/.test(line)) {
+                            violation = { match: line.trim().substring(0, 60), type: 'CORS wildcard (*) - allows any origin' };
+                        }
+                        if (/credentials\s*:\s*true.*origin\s*:\s*["']\*|origin\s*:\s*["']\*.*credentials\s*:\s*true/i.test(line)) {
+                            violation = { match: line.trim().substring(0, 60), type: 'CORS with credentials + wildcard' };
+                        }
+                    }
+                    
+                    // ── 12. Debug Statements ──
+                    if (ruleText.includes('console') || ruleText.includes('debug') || ruleText.includes('log')) {
+                        if (/console\.(log|debug|warn|info)\s*\(/.test(line) && !/^\s*\/\//.test(line)) {
+                            violation = { match: line.trim().substring(0, 60), type: 'Debug statement in production' };
+                        }
+                        if (/\bdebugger\b/.test(line) && !/^\s*\/\//.test(line)) {
+                            violation = { match: 'debugger', type: 'Debugger statement' };
+                        }
+                        // Python print
+                        if (language === 'python' && /\bprint\s*\(/.test(line) && !/logging|logger/i.test(line)) {
+                            violation = { match: line.trim().substring(0, 50), type: 'Debug print() statement' };
+                        }
+                    }
+                    
+                    // ── 13. TODO/FIXME Comments ──
+                    if (ruleText.includes('todo') || ruleText.includes('fixme') || ruleText.includes('hack') || ruleText.includes('comment')) {
+                        if (/\/\/\s*(TODO|FIXME|HACK|XXX|BUG)\b/i.test(line) || /#\s*(TODO|FIXME|HACK|XXX|BUG)\b/i.test(line)) {
+                            violation = { match: line.trim().substring(0, 60), type: 'Unresolved TODO/FIXME' };
+                        }
+                    }
+                    
+                    // ── 14. Empty Catch Blocks ──
+                    if (ruleText.includes('catch') || ruleText.includes('error') || ruleText.includes('empty')) {
+                        if (/catch\s*\([^)]*\)\s*\{\s*\}/.test(line)) {
+                            violation = { match: 'catch() { }', type: 'Empty catch block' };
+                        }
+                        // Python bare except
+                        if (/except\s*:\s*$/.test(line.trim()) || /except\s*:\s*pass/.test(line)) {
+                            violation = { match: line.trim().substring(0, 50), type: 'Bare except / swallowed error' };
+                        }
+                    }
+                    
+                    // ── 15. Const Preference (var/let) ──
+                    if (ruleText.includes('const') || ruleText.includes('var') || ruleText.includes('let') || ruleText.includes('prefer')) {
+                        if (/\bvar\s+\w+\s*=/.test(line) && (language === 'javascript' || language === 'typescript')) {
+                            violation = { match: line.trim().substring(0, 60), type: 'Use const/let instead of var' };
+                        }
+                    }
+                    
+                    // ── 16. Naming Conventions ──
+                    if (ruleText.includes('naming') || ruleText.includes('variable') || ruleText.includes('name') || ruleText.includes('hungarian') || ruleText.includes('length')) {
+                        // Hungarian notation
+                        if (/\b(str|int|bool|arr|obj|num|fn)[A-Z][a-zA-Z]+\s*[=:]/.test(line)) {
+                            violation = { match: line.trim().substring(0, 60), type: 'Hungarian notation detected' };
+                        }
+                        // Very long variable names (40+ chars)
+                        if (/\b(const|let|var|def|int|string)\s+(\w{41,})\s*[=]/.test(line)) {
+                            violation = { match: line.trim().substring(0, 60), type: 'Variable name too long (>40 chars)' };
+                        }
+                    }
+                    
+                    // ── 17. Magic Numbers ──
+                    if (ruleText.includes('magic') || ruleText.includes('number') || ruleText.includes('constant')) {
+                        if (/[=<>!]+\s*\d{3,}/.test(line) && !/^\s*(\/\/|#|\*|import|require|port|status|http|error)/i.test(line) && !/\.(length|size|status|port)/.test(line)) {
+                            violation = { match: line.trim().substring(0, 60), type: 'Magic number - use named constant' };
+                        }
+                    }
+                    
+                    // ── 18. Path Traversal ──
+                    if (ruleText.includes('path') || ruleText.includes('traversal') || ruleText.includes('directory') || ruleText.includes('file')) {
+                        if (/\.\.\/(\.\.\/)*/.test(line) && /(readFile|readdir|createReadStream|open|access)/i.test(line)) {
+                            violation = { match: line.trim().substring(0, 60), type: 'Potential path traversal' };
+                        }
+                        if (/req\.(params|query|body)\s*\[?.*\]?\s*.*\b(readFile|join|resolve)/i.test(line)) {
+                            violation = { match: line.trim().substring(0, 60), type: 'User input in file path' };
+                        }
+                    }
+                    
+                    // ── 19. ReDoS (Regex Denial of Service) ──
+                    if (ruleText.includes('regex') || ruleText.includes('redos') || ruleText.includes('denial')) {
+                        // Nested quantifiers that could cause catastrophic backtracking
+                        if (/new\s+RegExp\s*\(.*(\+|\*).*(\+|\*)/.test(line) || /\/.*(\+|\*)\).*(\+|\*)/.test(line)) {
+                            violation = { match: line.trim().substring(0, 60), type: 'Potential ReDoS pattern' };
+                        }
+                    }
+                    
+                    // ── 20. Hardcoded Port Numbers ──
+                    if (ruleText.includes('port') || ruleText.includes('hardcod') || ruleText.includes('config')) {
+                        if (/\.listen\s*\(\s*\d{4,5}\s*[,)]/.test(line) && !/process\.env|PORT|config/i.test(line)) {
+                            violation = { match: line.trim().substring(0, 60), type: 'Hardcoded port number' };
+                        }
+                    }
+                    
+                    // ── 21. Exposed Error Details ──
+                    if (ruleText.includes('error') || ruleText.includes('stack') || ruleText.includes('expose')) {
+                        if (/res\.(send|json)\s*\(.*\b(stack|stackTrace|err\.message)/i.test(line)) {
+                            violation = { match: line.trim().substring(0, 60), type: 'Exposed error/stack trace' };
+                        }
+                    }
+                    
+                    // ── 22. Insecure HTTP ──
+                    if (ruleText.includes('http') || ruleText.includes('insecure') || ruleText.includes('protocol')) {
+                        if (/["']http:\/\/(?!localhost|127\.0\.0\.1|0\.0\.0\.0)[^"'\s]+["']/.test(line)) {
+                            violation = { match: line.trim().substring(0, 60), type: 'Insecure HTTP (use HTTPS)' };
+                        }
+                    }
+                    
+                    // ── 23. Unsafe Object Prototype ──
+                    if (ruleText.includes('prototype') || ruleText.includes('pollution') || ruleText.includes('object')) {
+                        if (/\.__proto__\b/.test(line) || /Object\.assign\s*\(\s*\{\}.*req\.(body|query|params)/i.test(line)) {
+                            violation = { match: line.trim().substring(0, 60), type: 'Prototype pollution risk' };
                         }
                     }
                     
@@ -185,6 +416,24 @@ async function runInlineAnalysis(jobData) {
         }
 
         console.log(`[InlineAnalysis] Found ${allViolations.length} violations`);
+
+        // ── Set GitHub Commit Status (pending → success/failure) ──
+        try {
+            await octokit.rest.repos.createCommitStatus({
+                owner: repoOwner,
+                repo: repoName,
+                sha: headSha,
+                state: allViolations.length > 0 ? 'failure' : 'success',
+                description: allViolations.length > 0 
+                    ? `Found ${allViolations.length} violation(s)` 
+                    : 'No compliance violations found',
+                context: 'CodeGuard Pro / Security Analysis',
+                target_url: process.env.NEXTAUTH_URL ? `${process.env.NEXTAUTH_URL}/history` : undefined,
+            });
+            console.log(`[InlineAnalysis] Commit status set: ${allViolations.length > 0 ? 'failure' : 'success'}`);
+        } catch (statusError) {
+            console.error('[InlineAnalysis] Error setting commit status:', statusError.message);
+        }
 
         // Create violation records in DB
         for (const v of allViolations) {
@@ -260,6 +509,53 @@ async function runInlineAnalysis(jobData) {
                 status: 'SUCCESS',
             }
         });
+
+        // ── Slack Notification ──
+        try {
+            const slackWebhookUrl = process.env.SLACK_WEBHOOK_URL;
+            if (slackWebhookUrl) {
+                const statusEmoji = allViolations.length > 0 ? '❌' : '✅';
+                const statusText = allViolations.length > 0 ? 'Failed' : 'Passed';
+                
+                const slackPayload = {
+                    text: `${statusEmoji} CodeGuard: ${repoOwner}/${repoName} PR #${prNumber} - ${statusText}`,
+                    blocks: [
+                        {
+                            type: 'header',
+                            text: { type: 'plain_text', text: `${statusEmoji} CodeGuard Analysis ${statusText}` }
+                        },
+                        {
+                            type: 'section',
+                            fields: [
+                                { type: 'mrkdwn', text: `*Repository:*\n${repoOwner}/${repoName}` },
+                                { type: 'mrkdwn', text: `*PR:*\n#${prNumber}` },
+                                { type: 'mrkdwn', text: `*Violations:*\n${allViolations.length}` },
+                                { type: 'mrkdwn', text: `*Commit:*\n\`${headSha.slice(0, 7)}\`` }
+                            ]
+                        }
+                    ]
+                };
+
+                if (allViolations.length > 0) {
+                    const violationList = allViolations.slice(0, 5).map(v =>
+                        `• \`${v.filePath}:${v.line}\` - ${v.snippet}`
+                    ).join('\n');
+                    slackPayload.blocks.push({
+                        type: 'section',
+                        text: { type: 'mrkdwn', text: `*Top Violations:*\n${violationList}${allViolations.length > 5 ? `\n...and ${allViolations.length - 5} more` : ''}` }
+                    });
+                }
+
+                await fetch(slackWebhookUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(slackPayload)
+                });
+                console.log('[InlineAnalysis] Slack notification sent');
+            }
+        } catch (slackErr) {
+            console.log('[InlineAnalysis] Slack notification failed:', slackErr.message);
+        }
 
         console.log(`[InlineAnalysis] Completed. Found ${allViolations.length} violations.`);
         return { violations: allViolations.length };
