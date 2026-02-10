@@ -2,8 +2,21 @@ import crypto from 'crypto';
 import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { Octokit } from 'octokit';
+import { getInstallationOctokit } from '../../../../lib/github-app';
 
 const prisma = new PrismaClient();
+
+// Default security rules to seed when a project is auto-created
+const DEFAULT_SECURITY_RULES = [
+    { description: 'Prevent hardcoded API keys, passwords, tokens, or credentials in source code', language: 'javascript', treeSitterQuery: '(string) @secret', severity: 'CRITICAL' },
+    { description: 'Avoid using weak or deprecated cryptographic algorithms like MD5 or SHA1', language: 'javascript', treeSitterQuery: '(call_expression) @weak_crypto', severity: 'CRITICAL' },
+    { description: 'Avoid hardcoding URLs in source code. Use configuration or environment variables', language: 'javascript', treeSitterQuery: '(string) @hardcoded_url', severity: 'WARNING' },
+    { description: 'Avoid using eval() or exec() which can execute arbitrary code - security risk', language: 'javascript', treeSitterQuery: '(call_expression) @eval_exec', severity: 'CRITICAL' },
+    { description: 'Use cryptographically secure random number generators, not Math.random()', language: 'javascript', treeSitterQuery: '(call_expression) @insecure_random', severity: 'WARNING' },
+    { description: 'Never disable SSL certificate verification. This makes connections vulnerable to MITM attacks', language: 'javascript', treeSitterQuery: '(pair) @ssl_disabled', severity: 'CRITICAL' },
+    { description: 'Avoid using pickle for untrusted data - security risk for Python deserialization', language: 'python', treeSitterQuery: '(call) @pickle_usage', severity: 'CRITICAL' },
+    { description: 'Avoid document.write() as it can overwrite the entire DOM - XSS risk', language: 'javascript', treeSitterQuery: '(call_expression) @document_write', severity: 'WARNING' },
+];
 
 // Simple in-memory analysis (no Redis needed)
 async function runInlineAnalysis(jobData) {
@@ -14,13 +27,8 @@ async function runInlineAnalysis(jobData) {
     try {
         // Analysis is already PENDING, we'll update to SUCCESS or FAILURE at the end
 
-        // Get GitHub token - prefer App token, fallback to PAT
-        const githubToken = process.env.GITHUB_TOKEN;
-        if (!githubToken) {
-            throw new Error('GITHUB_TOKEN not configured');
-        }
-
-        const octokit = new Octokit({ auth: githubToken });
+        // Get authenticated Octokit - uses Installation Token if available, falls back to PAT
+        const octokit = await getInstallationOctokit(installationId);
 
         // ── Set commit status to "pending" ──
         try {
@@ -836,21 +844,152 @@ async function handlePullRequest(payload) {
 
 /**
  * Handle GitHub App installation events
+ * Auto-creates projects with default security rules when app is installed
  */
 async function handleInstallation(payload) {
     const action = payload.action;
     const installation = payload.installation;
     const sender = payload.sender;
+    const repos = payload.repositories || [];
 
-    console.log(`[Installation] ${action} by ${sender.login}`);
+    console.log(`[Installation] ${action} by ${sender.login} (${repos.length} repos)`);
 
     if (action === 'created') {
-        // New installation - save to database
         console.log(`[Installation] App installed on: ${installation.account.login}`);
-        // TODO: Save installation ID to database
+        
+        // Find or create user
+        let user = await prisma.user.findUnique({
+            where: { githubId: String(sender.id) }
+        });
+
+        if (!user) {
+            user = await prisma.user.create({
+                data: {
+                    githubId: String(sender.id),
+                    name: sender.login,
+                    avatarUrl: sender.avatar_url,
+                }
+            });
+            console.log(`[Installation] Created user: ${sender.login}`);
+        }
+
+        // Auto-create projects for each repo
+        for (const repo of repos) {
+            try {
+                const existing = await prisma.project.findUnique({
+                    where: { githubRepoId: BigInt(repo.id) }
+                });
+
+                if (existing) {
+                    // Update installation ID if project already exists
+                    await prisma.project.update({
+                        where: { id: existing.id },
+                        data: { installationId: String(installation.id) }
+                    });
+                    console.log(`[Installation] Updated installation ID for ${repo.full_name}`);
+                    continue;
+                }
+
+                const project = await prisma.project.create({
+                    data: {
+                        ownerId: user.id,
+                        repoName: repo.name,
+                        repoOwner: installation.account.login,
+                        repoUrl: `https://github.com/${repo.full_name}`,
+                        githubRepoId: BigInt(repo.id),
+                        installationId: String(installation.id),
+                    }
+                });
+
+                // Seed default security rules
+                for (const rule of DEFAULT_SECURITY_RULES) {
+                    await prisma.rule.create({
+                        data: {
+                            projectId: project.id,
+                            description: rule.description,
+                            language: rule.language,
+                            treeSitterQuery: rule.treeSitterQuery,
+                            severity: rule.severity,
+                            isActive: true,
+                        }
+                    });
+                }
+
+                console.log(`[Installation] Auto-created project "${repo.full_name}" with ${DEFAULT_SECURITY_RULES.length} default rules`);
+            } catch (repoError) {
+                console.error(`[Installation] Error creating project for ${repo.full_name}:`, repoError.message);
+            }
+        }
+
+        console.log(`[Installation] Setup complete for ${installation.account.login}`);
+
+    } else if (action === 'added') {
+        // Repos added to existing installation
+        const addedRepos = payload.repositories_added || [];
+        console.log(`[Installation] ${addedRepos.length} repos added to installation`);
+
+        let user = await prisma.user.findUnique({
+            where: { githubId: String(sender.id) }
+        });
+
+        if (!user) {
+            user = await prisma.user.create({
+                data: {
+                    githubId: String(sender.id),
+                    name: sender.login,
+                    avatarUrl: sender.avatar_url,
+                }
+            });
+        }
+
+        for (const repo of addedRepos) {
+            try {
+                const existing = await prisma.project.findUnique({
+                    where: { githubRepoId: BigInt(repo.id) }
+                });
+                if (existing) continue;
+
+                const project = await prisma.project.create({
+                    data: {
+                        ownerId: user.id,
+                        repoName: repo.name,
+                        repoOwner: installation.account.login,
+                        repoUrl: `https://github.com/${repo.full_name}`,
+                        githubRepoId: BigInt(repo.id),
+                        installationId: String(installation.id),
+                    }
+                });
+
+                for (const rule of DEFAULT_SECURITY_RULES) {
+                    await prisma.rule.create({
+                        data: {
+                            projectId: project.id,
+                            description: rule.description,
+                            language: rule.language,
+                            treeSitterQuery: rule.treeSitterQuery,
+                            severity: rule.severity,
+                            isActive: true,
+                        }
+                    });
+                }
+
+                console.log(`[Installation] Auto-created project "${repo.full_name}" with default rules`);
+            } catch (repoError) {
+                console.error(`[Installation] Error adding repo ${repo.full_name}:`, repoError.message);
+            }
+        }
+
+    } else if (action === 'removed') {
+        // Repos removed from installation
+        const removedRepos = payload.repositories_removed || [];
+        console.log(`[Installation] ${removedRepos.length} repos removed from installation`);
+
+        for (const repo of removedRepos) {
+            console.log(`[Installation] Repo removed: ${repo.full_name} (keeping in DB for history)`);
+        }
+
     } else if (action === 'deleted') {
-        // Installation removed
         console.log(`[Installation] App uninstalled from: ${installation.account.login}`);
-        // TODO: Remove installation from database
+        // Keep projects in DB for historical record, just log the event
     }
 }

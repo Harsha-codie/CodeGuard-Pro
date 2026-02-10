@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@octokit/auth-app": "^8.2.0",
     "@prisma/client": "^5.8.0",
     "clsx": "^2.1.0",
     "dotenv": "^17.2.3",
