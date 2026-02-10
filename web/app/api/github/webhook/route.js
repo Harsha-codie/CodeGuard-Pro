@@ -532,13 +532,54 @@ async function runInlineAnalysis(jobData) {
 
         // Post to GitHub PR
         if (allViolations.length > 0) {
+            // ═══════════════════════════════════════════════════════════════
+            // ENHANCED PR REVIEW COMMENTS
+            // Severity badges, category labels, structured formatting
+            // ═══════════════════════════════════════════════════════════════
+            
+            const getSeverityBadge = (severity) => {
+                switch (severity?.toUpperCase()) {
+                    case 'CRITICAL': return '🔴 **CRITICAL**';
+                    case 'HIGH': return '🟠 **HIGH**';
+                    case 'WARNING': return '🟡 **WARNING**';
+                    case 'MEDIUM': return '🟡 **MEDIUM**';
+                    case 'LOW': return '🔵 **LOW**';
+                    case 'INFO': return '🟢 **INFO**';
+                    default: return '⚠️ **WARNING**';
+                }
+            };
+            
+            const getCategoryIcon = (category) => {
+                switch (category?.toLowerCase()) {
+                    case 'security': return '🔐';
+                    case 'best-practice': return '📋';
+                    case 'performance': return '⚡';
+                    case 'naming': return '🏷️';
+                    case 'style': return '🎨';
+                    default: return '📌';
+                }
+            };
+
             // Group violations by file for PR review, include fix suggestions
             const reviewComments = allViolations.slice(0, 20).map(v => {
-                let body = `⚠️ **${v.ruleName}**\n\n${v.message}\n\n\`\`\`\n${v.snippet}\n\`\`\``;
+                const severity = getSeverityBadge(v.severity);
+                const category = v.category || (v.engine === 'ast' ? 'security' : 'code-quality');
+                const categoryIcon = getCategoryIcon(category);
+                const engine = v.engine === 'ast' ? '`AST`' : '`Regex`';
+                
+                let body = `${severity} ${categoryIcon} **${v.ruleName}**\n\n`;
+                body += `> ${v.message}\n\n`;
+                
+                // Code snippet with syntax highlighting
+                const lang = getLanguageForHighlight(v.filePath);
+                body += `**Detected Code:**\n\`\`\`${lang}\n${v.snippet}\n\`\`\`\n`;
+                
+                // Detection engine badge
+                body += `\n<sub>Detected by ${engine} engine</sub>\n`;
                 
                 // Add quick-fix suggestion if available
                 if (v.fix) {
-                    body += `\n\n💡 **Quick Fix:**\n\`\`\`suggestion\n${v.fix}\n\`\`\``;
+                    body += `\n---\n💡 **Suggested Fix:**\n\`\`\`suggestion\n${v.fix}\n\`\`\``;
                 }
                 
                 return { path: v.filePath, line: v.line, body };
@@ -556,13 +597,58 @@ async function runInlineAnalysis(jobData) {
                 console.log('[InlineAnalysis] Posted review comments to PR');
             } catch (reviewError) {
                 console.error('[InlineAnalysis] Error posting review:', reviewError.message);
-                // Fallback: post a single comment
+                // Fallback: post enhanced summary comment
                 try {
-                    const body = `## 🔍 CodeGuard Analysis Results\n\nFound **${allViolations.length}** compliance violation(s):\n\n` +
-                        allViolations.slice(0, 10).map(v => 
-                            `- **${v.filePath}:${v.line}** - ${v.ruleName}`
-                        ).join('\n') +
-                        (allViolations.length > 10 ? `\n\n...and ${allViolations.length - 10} more` : '');
+                    // Group violations by severity
+                    const critical = allViolations.filter(v => v.severity === 'CRITICAL' || v.severity === 'HIGH');
+                    const warnings = allViolations.filter(v => v.severity === 'WARNING' || v.severity === 'MEDIUM');
+                    const info = allViolations.filter(v => v.severity === 'LOW' || v.severity === 'INFO' || !v.severity);
+                    
+                    // Group by file
+                    const byFile = {};
+                    allViolations.forEach(v => {
+                        if (!byFile[v.filePath]) byFile[v.filePath] = [];
+                        byFile[v.filePath].push(v);
+                    });
+                    
+                    let body = `## 🔍 CodeGuard Security Analysis\n\n`;
+                    body += `| Severity | Count |\n|----------|-------|\n`;
+                    body += `| 🔴 Critical/High | ${critical.length} |\n`;
+                    body += `| 🟡 Warning/Medium | ${warnings.length} |\n`;
+                    body += `| 🔵 Low/Info | ${info.length} |\n`;
+                    body += `| **Total** | **${allViolations.length}** |\n\n`;
+                    
+                    // Critical issues first
+                    if (critical.length > 0) {
+                        body += `### 🔴 Critical Issues (Require Immediate Attention)\n\n`;
+                        critical.slice(0, 5).forEach(v => {
+                            body += `- **\`${v.filePath}:${v.line}\`** - ${v.ruleName}\n`;
+                            body += `  > ${v.message.substring(0, 100)}${v.message.length > 100 ? '...' : ''}\n`;
+                        });
+                        if (critical.length > 5) body += `- _...and ${critical.length - 5} more critical issues_\n`;
+                        body += '\n';
+                    }
+                    
+                    // Warnings
+                    if (warnings.length > 0) {
+                        body += `### 🟡 Warnings\n\n`;
+                        warnings.slice(0, 5).forEach(v => {
+                            body += `- **\`${v.filePath}:${v.line}\`** - ${v.ruleName}\n`;
+                        });
+                        if (warnings.length > 5) body += `- _...and ${warnings.length - 5} more warnings_\n`;
+                        body += '\n';
+                    }
+                    
+                    // Files affected
+                    body += `### 📁 Files Affected\n\n`;
+                    Object.keys(byFile).slice(0, 5).forEach(file => {
+                        body += `- \`${file}\` (${byFile[file].length} issues)\n`;
+                    });
+                    if (Object.keys(byFile).length > 5) {
+                        body += `- _...and ${Object.keys(byFile).length - 5} more files_\n`;
+                    }
+                    
+                    body += `\n---\n<sub>🤖 Analyzed by CodeGuard Pro | [View Dashboard](${process.env.NEXTAUTH_URL || 'https://codeguard.dev'}/history)</sub>`;
                     
                     await octokit.rest.issues.createComment({
                         owner: repoOwner,
@@ -576,13 +662,21 @@ async function runInlineAnalysis(jobData) {
                 }
             }
         } else {
-            // Post success comment
+            // Post enhanced success comment
             try {
+                const body = `## ✅ CodeGuard Security Analysis Passed\n\n` +
+                    `No compliance violations detected in this PR.\n\n` +
+                    `| Check | Status |\n|-------|--------|\n` +
+                    `| 🔐 Security | ✅ Passed |\n` +
+                    `| 📋 Best Practices | ✅ Passed |\n` +
+                    `| 🎨 Code Style | ✅ Passed |\n\n` +
+                    `<sub>🤖 Analyzed by CodeGuard Pro</sub>`;
+                
                 await octokit.rest.issues.createComment({
                     owner: repoOwner,
                     repo: repoName,
                     issue_number: prNumber,
-                    body: '## ✅ CodeGuard Analysis Passed\n\nNo compliance violations detected. Great job!'
+                    body
                 });
             } catch (e) {
                 console.log('[InlineAnalysis] Could not post success comment:', e.message);
@@ -678,6 +772,39 @@ async function runInlineAnalysis(jobData) {
         });
         throw error;
     }
+}
+
+/**
+ * Get the language identifier for GitHub code fence syntax highlighting
+ */
+function getLanguageForHighlight(filePath) {
+    const ext = filePath.split('.').pop()?.toLowerCase();
+    const langMap = {
+        'js': 'javascript', 'jsx': 'javascript', 'mjs': 'javascript', 'cjs': 'javascript',
+        'ts': 'typescript', 'tsx': 'typescript',
+        'py': 'python', 'pyw': 'python',
+        'java': 'java',
+        'go': 'go',
+        'c': 'c', 'h': 'c',
+        'cpp': 'cpp', 'cc': 'cpp', 'cxx': 'cpp', 'hpp': 'cpp',
+        'rs': 'rust',
+        'rb': 'ruby',
+        'php': 'php',
+        'cs': 'csharp',
+        'swift': 'swift',
+        'kt': 'kotlin',
+        'scala': 'scala',
+        'sh': 'bash', 'bash': 'bash',
+        'sql': 'sql',
+        'yaml': 'yaml', 'yml': 'yaml',
+        'json': 'json',
+        'xml': 'xml',
+        'html': 'html',
+        'css': 'css',
+        'scss': 'scss',
+        'md': 'markdown',
+    };
+    return langMap[ext] || '';
 }
 
 /**
