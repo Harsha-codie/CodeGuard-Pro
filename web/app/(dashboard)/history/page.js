@@ -192,9 +192,23 @@ export default function HistoryPage() {
                         {Icons.activity}
                     </div>
                     <h3 style={{ marginBottom: '12px' }}>No analyses yet</h3>
-                    <p style={{ color: 'var(--text-muted)', maxWidth: '400px', margin: '0 auto' }}>
-                        Once you set up GitHub webhooks and add rules to your projects, PR analyses will appear here.
+                    <p style={{ color: 'var(--text-muted)', maxWidth: '500px', margin: '0 auto 16px' }}>
+                        PR analyses will appear here after you open or update a pull request on a connected repository.
                     </p>
+                    <div style={{ 
+                        display: 'flex', 
+                        gap: '16px', 
+                        justifyContent: 'center',
+                        flexWrap: 'wrap',
+                        marginTop: '20px' 
+                    }}>
+                        <a href="/projects" className="btn btn-primary" style={{ textDecoration: 'none' }}>
+                            View Projects
+                        </a>
+                        <a href="/integrations" className="btn btn-secondary" style={{ textDecoration: 'none' }}>
+                            Check Integrations
+                        </a>
+                    </div>
                 </div>
             )}
 

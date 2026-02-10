@@ -82,6 +82,27 @@ export default function SettingsPage() {
                 </p>
             </div>
 
+            {/* Environment Config Info */}
+            <div className="card" style={{ 
+                background: 'rgba(59, 130, 246, 0.1)', 
+                borderColor: 'rgba(59, 130, 246, 0.3)',
+                marginBottom: '24px'
+            }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                    <span style={{ fontSize: '1.25rem' }}>ℹ️</span>
+                    <div>
+                        <strong style={{ color: 'var(--accent-primary)' }}>Server Configuration</strong>
+                        <p style={{ margin: '8px 0 0 0', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
+                            Core integrations (Slack, JIRA, Gemini AI) are configured via environment variables on the server. 
+                            The settings below are stored in your browser for UI preferences.
+                        </p>
+                        <div style={{ marginTop: '12px', fontSize: '0.8rem', fontFamily: 'monospace', color: 'var(--text-muted)' }}>
+                            <code>SLACK_WEBHOOK_URL</code> • <code>JIRA_HOST</code> • <code>GEMINI_API_KEY</code>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
                 {/* General Settings */}
                 <div className="card">
@@ -118,10 +139,22 @@ export default function SettingsPage() {
                 {/* AI Configuration */}
                 <div className="card">
                     <h3 style={{ marginBottom: '20px' }}>AI Configuration</h3>
+                    
+                    <div style={{ 
+                        padding: '12px', 
+                        background: 'rgba(245, 158, 11, 0.1)', 
+                        borderRadius: '8px',
+                        marginBottom: '16px',
+                        fontSize: '0.8rem',
+                        color: 'var(--text-secondary)'
+                    }}>
+                        💡 AI features use <code>GEMINI_API_KEY</code> from server environment. 
+                        This field stores a reference for future user-specific keys.
+                    </div>
 
                     <div style={{ marginBottom: '16px' }}>
                         <label style={{ display: 'block', fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '8px' }}>
-                            OpenAI API Key
+                            OpenAI API Key (Optional)
                         </label>
                         <input
                             type="password"
@@ -131,7 +164,7 @@ export default function SettingsPage() {
                             onChange={(e) => setSettings({ ...settings, openaiApiKey: e.target.value })}
                         />
                         <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '6px' }}>
-                            Required for AI-powered rule generation and violation explanations.
+                            For future per-user AI features. Currently server uses Gemini.
                         </p>
                     </div>
                 </div>
@@ -139,6 +172,18 @@ export default function SettingsPage() {
                 {/* Jira Integration */}
                 <div className="card">
                     <h3 style={{ marginBottom: '20px' }}>Jira Integration</h3>
+                    
+                    <div style={{ 
+                        padding: '12px', 
+                        background: 'rgba(59, 130, 246, 0.1)', 
+                        borderRadius: '8px',
+                        marginBottom: '16px',
+                        fontSize: '0.8rem',
+                        color: 'var(--text-secondary)'
+                    }}>
+                        ⚙️ JIRA integration is configured via server environment variables: 
+                        <code style={{ display: 'block', marginTop: '4px' }}>JIRA_HOST, JIRA_EMAIL, JIRA_API_TOKEN, JIRA_PROJECT_KEY</code>
+                    </div>
 
                     <div style={{ marginBottom: '16px' }}>
                         <label style={{
@@ -153,7 +198,7 @@ export default function SettingsPage() {
                                 onChange={(e) => setSettings({ ...settings, autoCreateJira: e.target.checked })}
                                 style={{ width: '18px', height: '18px', accentColor: 'var(--accent-primary)' }}
                             />
-                            <span style={{ fontSize: '0.875rem' }}>Auto-create Jira tickets for CRITICAL violations</span>
+                            <span style={{ fontSize: '0.875rem' }}>Auto-create Jira tickets for CRITICAL violations (UI preference)</span>
                         </label>
                     </div>
 
@@ -191,6 +236,17 @@ export default function SettingsPage() {
                 {/* Notifications */}
                 <div className="card">
                     <h3 style={{ marginBottom: '20px' }}>Notifications</h3>
+                    
+                    <div style={{ 
+                        padding: '12px', 
+                        background: 'rgba(59, 130, 246, 0.1)', 
+                        borderRadius: '8px',
+                        marginBottom: '16px',
+                        fontSize: '0.8rem',
+                        color: 'var(--text-secondary)'
+                    }}>
+                        ⚙️ Slack notifications use <code>SLACK_WEBHOOK_URL</code> from server environment.
+                    </div>
 
                     <div style={{ marginBottom: '16px' }}>
                         <label style={{
@@ -205,7 +261,7 @@ export default function SettingsPage() {
                                 onChange={(e) => setSettings({ ...settings, notifyOnSuccess: e.target.checked })}
                                 style={{ width: '18px', height: '18px', accentColor: 'var(--accent-primary)' }}
                             />
-                            <span style={{ fontSize: '0.875rem' }}>Notify on successful checks</span>
+                            <span style={{ fontSize: '0.875rem' }}>Notify on successful checks (UI preference)</span>
                         </label>
                     </div>
 

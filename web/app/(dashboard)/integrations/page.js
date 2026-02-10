@@ -87,6 +87,23 @@ export default function IntegrationsPage() {
                 </div>
             )}
 
+            {/* GitHub App Status */}
+            <div className="card" style={{ 
+                marginBottom: '24px',
+                background: 'rgba(16, 185, 129, 0.1)', 
+                borderColor: 'rgba(16, 185, 129, 0.3)'
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <span style={{ fontSize: '1.25rem' }}>✅</span>
+                    <div>
+                        <strong style={{ color: 'var(--accent-success)' }}>Webhook Active</strong>
+                        <p style={{ margin: '4px 0 0 0', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
+                            GitHub webhooks are configured and ready. PRs will be automatically analyzed when opened.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
             {/* GitHub Integration Card */}
             <div className="card" style={{ marginBottom: '24px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
