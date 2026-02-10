@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { getServerSession } from 'next-auth';
+import { authOptions } from '../auth/[...nextauth]/route';
 
 const prisma = new PrismaClient();
 
@@ -10,13 +11,13 @@ const prisma = new PrismaClient();
  */
 export async function GET(request) {
     try {
-        const session = await getServerSession();
+        const session = await getServerSession(authOptions);
         
         if (!session?.user) {
             return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
         }
 
-        // Find user
+        // Find user by githubId from session
         let user = null;
         if (session.user.githubId) {
             user = await prisma.user.findUnique({
@@ -24,7 +25,12 @@ export async function GET(request) {
             });
         }
 
+        // Debug logging
+        console.log('[Analyses API] Session user:', session.user?.name, 'githubId:', session.user?.githubId);
+        console.log('[Analyses API] Found DB user:', user?.id, user?.name);
+
         if (!user) {
+            console.log('[Analyses API] No user found, returning empty');
             return NextResponse.json({ success: true, analyses: [] });
         }
 
