@@ -63,8 +63,14 @@ export class RepoAnalyzer {
                     categories: ['security', 'best-practice', 'style', 'naming', 'performance'],
                 });
 
-                if (result.violations && result.violations.length > 0) {
-                    for (const violation of result.violations) {
+                // If AST engine returned nothing (WASM failed), use regex fallback
+                let violations = result.violations || [];
+                if (violations.length === 0 && (result.astSupported === false || result.error)) {
+                    violations = this._regexAnalysis(content, filePath);
+                }
+
+                if (violations.length > 0) {
+                    for (const violation of violations) {
                         allIssues.push({
                             file: filePath,
                             line: violation.line || 0,
@@ -169,9 +175,15 @@ export class RepoAnalyzer {
      * Classify a violation into the required bug type enum
      */
     _classifyViolation(violation) {
+        // If category is already a valid bug_type from regex fallback, use it directly
+        const validTypes = new Set(['SYNTAX', 'IMPORT', 'TYPE_ERROR', 'INDENTATION', 'LINTING', 'LOGIC']);
+        const category = (violation.category || '').toUpperCase();
+        if (validTypes.has(category)) {
+            return category;
+        }
+
         const msg = (violation.message || violation.description || '').toLowerCase();
         const rule = (violation.ruleName || violation.ruleId || '').toLowerCase();
-        const category = (violation.category || '').toLowerCase();
 
         // SYNTAX errors
         if (msg.includes('syntax') || msg.includes('unexpected token') || msg.includes('parsing error')) {
@@ -226,23 +238,60 @@ export class RepoAnalyzer {
         const lines = code.split('\n');
 
         const patterns = [
-            { regex: /eval\s*\(/, msg: 'Use of eval() is dangerous', type: 'LOGIC' },
-            { regex: /exec\s*\(/, msg: 'Use of exec() is dangerous', type: 'LOGIC' },
-            { regex: /(password|secret|api_key|apikey)\s*=\s*['"][^'"]+['"]/i, msg: 'Hardcoded secret detected', type: 'LOGIC' },
-            { regex: /console\.(log|debug|info)\s*\(/, msg: 'Console statement found', type: 'LINTING' },
-            { regex: /TODO|FIXME|HACK|XXX/, msg: 'TODO/FIXME comment found', type: 'LINTING' },
-            { regex: /==\s*null|!=\s*null/, msg: 'Use strict equality (===) for null checks', type: 'LOGIC' },
-            { regex: /catch\s*\(\s*\w+\s*\)\s*\{\s*\}/, msg: 'Empty catch block', type: 'LOGIC' },
-            { regex: /import\s+\*\s+from/, msg: 'Wildcard import detected', type: 'IMPORT' },
+            // Security
+            { regex: /eval\s*\(/, msg: 'Use of eval() is dangerous — allows arbitrary code execution', type: 'LOGIC', severity: 'CRITICAL' },
+            { regex: /exec\s*\(/, msg: 'Use of exec() is dangerous — allows arbitrary code execution', type: 'LOGIC', severity: 'CRITICAL' },
+            { regex: /(password|secret|api_key|apikey|api_secret|auth_token|jwt_secret)\s*=\s*['"][^'"]+['"]/i, msg: 'Hardcoded secret/credential detected', type: 'LOGIC', severity: 'CRITICAL' },
+            { regex: /\.innerHTML\s*=/, msg: 'innerHTML assignment — XSS vulnerability', type: 'LOGIC', severity: 'CRITICAL' },
+            { regex: /\.outerHTML\s*=/, msg: 'outerHTML assignment — XSS vulnerability', type: 'LOGIC', severity: 'CRITICAL' },
+            { regex: /document\.write\s*\(/, msg: 'document.write() — XSS vulnerability', type: 'LOGIC', severity: 'CRITICAL' },
+            { regex: /new\s+Function\s*\(/, msg: 'new Function() constructor — code injection risk', type: 'LOGIC', severity: 'CRITICAL' },
+            { regex: /createHash\s*\(\s*['"]md5['"]/, msg: 'Weak crypto: MD5 hash is insecure', type: 'LOGIC', severity: 'CRITICAL' },
+            { regex: /createHash\s*\(\s*['"]sha1['"]/, msg: 'Weak crypto: SHA-1 hash is insecure', type: 'LOGIC', severity: 'WARNING' },
+            { regex: /hashlib\.md5\s*\(/, msg: 'Weak crypto: MD5 hash is insecure', type: 'LOGIC', severity: 'CRITICAL' },
+            { regex: /hashlib\.sha1\s*\(/, msg: 'Weak crypto: SHA-1 hash is insecure', type: 'LOGIC', severity: 'WARNING' },
+            { regex: /Math\.random\s*\(/, msg: 'Math.random() is not cryptographically secure', type: 'LOGIC', severity: 'WARNING' },
+            { regex: /rejectUnauthorized\s*:\s*false/, msg: 'SSL/TLS verification disabled', type: 'LOGIC', severity: 'CRITICAL' },
+            { regex: /verify\s*=\s*False/, msg: 'SSL verification disabled (verify=False)', type: 'LOGIC', severity: 'CRITICAL' },
+            { regex: /os\.system\s*\(/, msg: 'os.system() — command injection risk', type: 'LOGIC', severity: 'CRITICAL' },
+            { regex: /subprocess.*shell\s*=\s*True/, msg: 'subprocess with shell=True — command injection risk', type: 'LOGIC', severity: 'CRITICAL' },
+            { regex: /pickle\.(load|loads)\s*\(/, msg: 'pickle deserialization — arbitrary code execution risk', type: 'LOGIC', severity: 'CRITICAL' },
+            { regex: /yaml\.load\s*\(/, msg: 'yaml.load() without SafeLoader — code execution risk', type: 'LOGIC', severity: 'CRITICAL' },
+            { regex: /setTimeout\s*\(\s*['"]/, msg: 'setTimeout with string argument — eval equivalent', type: 'LOGIC', severity: 'CRITICAL' },
+            { regex: /setInterval\s*\(\s*['"]/, msg: 'setInterval with string argument — eval equivalent', type: 'LOGIC', severity: 'CRITICAL' },
+            { regex: /origin\s*:\s*['"]?\*['"]?/, msg: 'CORS wildcard origin — allows any domain', type: 'LOGIC', severity: 'WARNING' },
+            { regex: /__proto__/, msg: '__proto__ access — prototype pollution risk', type: 'LOGIC', severity: 'CRITICAL' },
+            // Style / Linting
+            { regex: /console\.(log|debug|info)\s*\(/, msg: 'Console statement left in code', type: 'LINTING', severity: 'INFO' },
+            { regex: /\bprint\s*\(/, msg: 'Print statement left in code', type: 'LINTING', severity: 'INFO' },
+            { regex: /\bdebugger\b/, msg: 'Debugger statement left in code', type: 'LINTING', severity: 'WARNING' },
+            { regex: /\balert\s*\(/, msg: 'alert() usage — remove before production', type: 'LINTING', severity: 'WARNING' },
+            { regex: /\bvar\s+\w/, msg: 'Use let/const instead of var', type: 'LINTING', severity: 'INFO' },
+            { regex: /TODO|FIXME|HACK|XXX/, msg: 'TODO/FIXME comment found', type: 'LINTING', severity: 'INFO' },
+            // Best practice
+            { regex: /catch\s*\([^)]*\)\s*\{\s*\}/, msg: 'Empty catch block — errors silently swallowed', type: 'LOGIC', severity: 'WARNING' },
+            { regex: /catch\s*:\s*$/, msg: 'Bare except/catch — catches all errors', type: 'LOGIC', severity: 'WARNING' },
+            { regex: /except\s*:/, msg: 'Bare except clause — catches all exceptions', type: 'LOGIC', severity: 'WARNING' },
+            { regex: /throw\s+['"]/, msg: 'Throw string literal — use Error object', type: 'LOGIC', severity: 'WARNING' },
+            { regex: /==\s*null|!=\s*null/, msg: 'Use strict equality (===) for null checks', type: 'LOGIC', severity: 'INFO' },
+            { regex: /import\s+\*\s+from/, msg: 'Wildcard import detected', type: 'IMPORT', severity: 'WARNING' },
+            { regex: /from\s+\S+\s+import\s+\*/, msg: 'Wildcard import (from x import *)', type: 'IMPORT', severity: 'WARNING' },
+            { regex: /\bwith\s*\(/, msg: 'with statement — makes code unpredictable', type: 'LOGIC', severity: 'WARNING' },
+            { regex: /readFileSync|writeFileSync|existsSync/, msg: 'Synchronous file operation — blocks event loop', type: 'LOGIC', severity: 'WARNING' },
+            { regex: /def\s+\w+\s*\(.*=\s*\[\s*\]/, msg: 'Mutable default argument (list) — shared across calls', type: 'LOGIC', severity: 'WARNING' },
+            { regex: /def\s+\w+\s*\(.*=\s*\{\s*\}/, msg: 'Mutable default argument (dict) — shared across calls', type: 'LOGIC', severity: 'WARNING' },
+            { regex: /\bglobal\s+\w/, msg: 'Global statement — avoid mutable global state', type: 'LOGIC', severity: 'WARNING' },
+            { regex: /\bassert\s+/, msg: 'Assert statement — disabled with -O flag in production', type: 'LOGIC', severity: 'INFO' },
         ];
 
         for (let i = 0; i < lines.length; i++) {
-            for (const { regex, msg, type } of patterns) {
+            for (const { regex, msg, type, severity } of patterns) {
                 if (regex.test(lines[i])) {
                     violations.push({
                         line: i + 1,
                         message: msg,
                         category: type,
+                        severity: severity || 'WARNING',
                         snippet: lines[i].trim(),
                     });
                 }
