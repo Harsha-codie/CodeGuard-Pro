@@ -253,24 +253,74 @@ async function pushBranch(state) {
 
     onProgress?.({ stage: 'push_branch', message: 'Creating Pull Request...' });
 
-    const { prUrl, prNumber } = await prCreator.createPR(
-        state.ai_branch,
-        state.default_branch,
-        {
-            issues: state.issues,
-            fixes: state.fixes_applied,
-            retryCount: state.retry_count,
-            ciStatus: 'PENDING',
-        },
-    );
+    // Sanitize issues and fixes to prevent null/undefined crashes in PR body
+    const safeIssues = state.issues.map(i => ({
+        ...i,
+        file: i.file || 'unknown',
+        line: i.line || 0,
+        bug_type: i.bug_type || 'UNKNOWN',
+        description: (i.description || 'No description').replace(/\|/g, '\\|'),
+    }));
+    const safeFixes = state.fixes_applied.map(f => ({
+        ...f,
+        file: f.file || 'unknown',
+        bug_type: f.bug_type || 'UNKNOWN',
+        commitMessage: (f.commitMessage || `[AI-AGENT] Fix in ${f.file || 'unknown'}`).replace(/\|/g, '\\|'),
+    }));
 
-    onProgress?.({ stage: 'push_branch', message: `PR created: ${prUrl}` });
+    try {
+        const { prUrl, prNumber } = await prCreator.createPR(
+            state.ai_branch,
+            state.default_branch,
+            {
+                issues: safeIssues,
+                fixes: safeFixes,
+                retryCount: state.retry_count,
+                ciStatus: 'PENDING',
+            },
+        );
 
-    return {
-        pr_url: prUrl,
-        pr_number: prNumber,
-        logs: [{ stage: 'push_branch', message: `PR #${prNumber} created`, timestamp: new Date().toISOString() }],
-    };
+        onProgress?.({ stage: 'push_branch', message: `PR created: ${prUrl}` });
+
+        return {
+            pr_url: prUrl,
+            pr_number: prNumber,
+            logs: [{ stage: 'push_branch', message: `PR #${prNumber} created`, timestamp: new Date().toISOString() }],
+        };
+    } catch (error) {
+        console.error(`[push_branch] PR creation failed:`, error.message, error.status, error.response?.data);
+        onProgress?.({ stage: 'push_branch', message: `⚠️ PR creation failed: ${error.message}` });
+
+        // Retry once with a truncated body (GitHub has 65536 char body limit)
+        try {
+            const truncatedIssues = safeIssues.slice(0, 30);
+            const truncatedFixes = safeFixes.filter(f => f.status === 'applied').slice(0, 20);
+
+            const { prUrl, prNumber } = await prCreator.createPR(
+                state.ai_branch,
+                state.default_branch,
+                {
+                    issues: truncatedIssues,
+                    fixes: truncatedFixes,
+                    retryCount: state.retry_count,
+                    ciStatus: 'PENDING',
+                },
+            );
+
+            onProgress?.({ stage: 'push_branch', message: `PR created (truncated body): ${prUrl}` });
+            return {
+                pr_url: prUrl,
+                pr_number: prNumber,
+                logs: [{ stage: 'push_branch', message: `PR #${prNumber} created (retry with truncated body)`, timestamp: new Date().toISOString() }],
+            };
+        } catch (retryError) {
+            console.error(`[push_branch] PR retry also failed:`, retryError.message);
+            onProgress?.({ stage: 'push_branch', message: `❌ PR creation failed after retry: ${retryError.message}` });
+            return {
+                logs: [{ stage: 'push_branch', message: `PR creation failed: ${error.message}`, timestamp: new Date().toISOString() }],
+            };
+        }
+    }
 }
 
 /**

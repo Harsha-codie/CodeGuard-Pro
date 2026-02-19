@@ -128,7 +128,8 @@ export class PRCreator {
 `;
 
         issues.forEach((issue, i) => {
-            body += `| ${i + 1} | \`${issue.file}\` | ${issue.line} | \`${issue.bug_type}\` | ${issue.description.substring(0, 80)} |\n`;
+            const desc = (issue.description || '').substring(0, 80).replace(/\|/g, '\\|').replace(/\n/g, ' ');
+            body += `| ${i + 1} | \`${issue.file || 'unknown'}\` | ${issue.line || 0} | \`${issue.bug_type || 'UNKNOWN'}\` | ${desc} |\n`;
         });
 
         body += `\n---\n\n### 🔧 Fixes Applied\n\n`;
@@ -139,7 +140,8 @@ export class PRCreator {
 
             fixes.forEach((fix, i) => {
                 const statusBadge = fix.status === 'applied' ? '✅ Applied' : '❌ Failed';
-                body += `| ${i + 1} | \`${fix.file}\` | \`${fix.bug_type}\` | ${fix.commitMessage.substring(0, 60)} | ${statusBadge} |\n`;
+                const msg = (fix.commitMessage || '').substring(0, 60).replace(/\|/g, '\\|').replace(/\n/g, ' ');
+                body += `| ${i + 1} | \`${fix.file || 'unknown'}\` | \`${fix.bug_type || 'UNKNOWN'}\` | ${msg} | ${statusBadge} |\n`;
             });
         } else {
             body += `_No fixes were applied._\n`;
