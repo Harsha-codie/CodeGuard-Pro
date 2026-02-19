@@ -43,6 +43,14 @@ const icons = {
             <path d="M12 16h.01" />
         </svg>
     ),
+    heal: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 2a4 4 0 0 1 4 4v2a4 4 0 0 1-8 0V6a4 4 0 0 1 4-4z" />
+            <path d="M16 14H8l-2 8h12l-2-8z" />
+            <path d="M9 10h6" />
+            <path d="M12 7v6" />
+        </svg>
+    ),
 };
 
 const navItems = [
@@ -51,6 +59,7 @@ const navItems = [
     { name: 'Rules', href: '/rules', icon: 'rules' },
     { name: 'Rule Templates', href: '/rules/templates', icon: 'rules' },
     { name: 'Analysis History', href: '/history', icon: 'history' },
+    { name: 'Repo Heal', href: '/repo-heal', icon: 'heal' },
     { name: 'Integrations', href: '/integrations', icon: 'projects' },
     { name: 'Settings', href: '/settings', icon: 'settings' },
 ];
