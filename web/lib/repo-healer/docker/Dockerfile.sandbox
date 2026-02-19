@@ -1,0 +1,36 @@
+# ============================================================
+# CodeGuard Pro — Sandboxed Test Execution Environment
+# 
+# Multi-language sandbox for safely running untrusted repo tests.
+# Runs as non-root user with resource limits.
+# ============================================================
+
+FROM node:20-slim AS base
+
+# Install Python, Go, and common tools
+RUN apt-get -o Acquire::Check-Valid-Until=false -o Acquire::Check-Date=false update \
+    && apt-get install -y --no-install-recommends \
+    python3 python3-pip python3-venv \
+    git curl ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user for sandboxed execution
+RUN groupadd -r sandbox && useradd -r -g sandbox -m -s /bin/bash sandbox
+
+# Create workspace directory
+RUN mkdir -p /workspace && chown sandbox:sandbox /workspace
+
+# Set Python to not buffer output
+ENV PYTHONUNBUFFERED=1
+ENV CI=true
+ENV NODE_ENV=test
+
+# Switch to non-root user
+USER sandbox
+WORKDIR /workspace
+
+# Default: run tests via the entrypoint script
+COPY --chown=sandbox:sandbox entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]

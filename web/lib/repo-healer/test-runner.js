@@ -1,8 +1,9 @@
 /**
  * TestRunner — Discovers and runs tests in a cloned repository
  * 
- * Detects project type (Node.js, Python, etc.) and runs tests
- * using Docker for sandboxed execution, falling back to local execution.
+ * Detects project type (Node.js, Python, etc.) and runs tests.
+ * Uses Docker sandbox when available for safe execution of untrusted code.
+ * Falls back to local execution if Docker is not running.
  * 
  * Captures structured failure logs for the FixAgent.
  */
@@ -10,12 +11,15 @@
 import { execSync } from 'child_process';
 import { existsSync, readFileSync, readdirSync, statSync } from 'fs';
 import { join, relative, extname } from 'path';
+import { DockerSandbox } from './docker-sandbox';
 
 export class TestRunner {
-    constructor(repoPath) {
+    constructor(repoPath, options = {}) {
         this.repoPath = repoPath;
         this.projectType = null;
         this.testFiles = [];
+        this.useDocker = options.useDocker ?? true; // Docker by default
+        this.sandbox = null;
     }
 
     /**
@@ -30,13 +34,83 @@ export class TestRunner {
         this.testFiles = this._discoverTestFiles();
         console.log(`[TestRunner] Found ${this.testFiles.length} test files`);
 
-        // Step 3: Install dependencies
+        if (this.testFiles.length === 0) {
+            console.log('[TestRunner] No test files found, skipping test execution');
+            return { projectType: this.projectType, testFiles: [], totalTests: 0, passed: 0, failed: 0, failures: [], rawOutput: '' };
+        }
+
+        // Step 3: Try Docker sandbox first (safe), fall back to local
+        if (this.useDocker && DockerSandbox.isAvailable()) {
+            console.log('[TestRunner] Docker available — running tests in sandbox');
+            return this._runTestsInDocker();
+        }
+
+        console.log('[TestRunner] Docker not available — running tests locally (⚠️ unsafe for untrusted repos)');
+
+        // Step 3b: Install dependencies (local only)
         await this._installDependencies();
 
-        // Step 4: Run tests and capture output
+        // Step 4: Run tests locally
         const results = await this._runTests();
-
         return results;
+    }
+
+    /**
+     * Run tests inside Docker sandbox
+     */
+    async _runTestsInDocker() {
+        const result = {
+            projectType: this.projectType,
+            testFiles: this.testFiles,
+            totalTests: 0,
+            passed: 0,
+            failed: 0,
+            failures: [],
+            rawOutput: '',
+            sandboxed: true,
+        };
+
+        try {
+            this.sandbox = new DockerSandbox({
+                memoryLimit: '512m',
+                cpuLimit: '1.0',
+                timeoutMs: 180000,
+            });
+
+            const dockerResult = await this.sandbox.runTests(this.repoPath, this.projectType);
+
+            result.rawOutput = dockerResult.stdout + '\n' + dockerResult.stderr;
+
+            if (dockerResult.timedOut) {
+                result.failures.push({
+                    message: 'Test execution timed out in sandbox (3 min limit)',
+                    file: '',
+                    line: 0,
+                    snippet: 'Container was killed after exceeding time limit',
+                });
+                result.failed = 1;
+                return result;
+            }
+
+            // Parse failures from container output
+            if (dockerResult.exitCode !== 0) {
+                const allOutput = dockerResult.stdout + '\n' + dockerResult.stderr;
+                const lines = allOutput.split('\n');
+                result.failures = this._parseTestFailures(allOutput);
+                result.failed = result.failures.length;
+            }
+
+            console.log(`[TestRunner] Docker sandbox: ${result.failures.length} failures detected`);
+            return result;
+
+        } catch (error) {
+            console.warn(`[TestRunner] Docker sandbox failed: ${error.message}`);
+            console.log('[TestRunner] Falling back to local execution');
+
+            // Fallback to local
+            await this._installDependencies();
+            return this._runTests();
+        }
     }
 
     /**

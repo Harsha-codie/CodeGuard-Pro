@@ -92,12 +92,13 @@ export class RepoHealerEngine {
             const { localPath, defaultBranch, installationId } = await this.cloner.clone();
             this._emit('clone', { message: `Cloned to ${localPath}, branch: ${defaultBranch}` });
 
-            // STEP 2 — Discover & Run Tests
+            // STEP 2 — Discover & Run Tests (Docker sandboxed if available)
             this._emit('test', { message: 'Discovering and running tests...' });
-            this.testRunner = new TestRunner(localPath);
+            this.testRunner = new TestRunner(localPath, { useDocker: true });
             const testResults = await this.testRunner.discoverAndRun();
+            const sandboxLabel = testResults.sandboxed ? '🐳 Docker sandbox' : '⚠️ Local (no sandbox)';
             this._emit('test', {
-                message: `Tests complete: ${testResults.failures.length} failures found`,
+                message: `Tests complete [${sandboxLabel}]: ${testResults.failures.length} failures found`,
                 failures: testResults.failures.length,
             });
 
