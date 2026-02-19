@@ -169,13 +169,22 @@ export class RepoAnalyzer {
      */
     _isTestFile(filePath) {
         const lower = filePath.toLowerCase();
+        const base = lower.split('/').pop() || lower;
         return (
-            lower.includes('test') ||
-            lower.includes('spec') ||
-            lower.includes('__tests__') ||
-            lower.includes('.test.') ||
-            lower.includes('.spec.') ||
-            lower.includes('_test.')
+            lower.includes('__tests__/') ||
+            lower.includes('__test__/') ||
+            base.includes('.test.') ||
+            base.includes('.spec.') ||
+            base.includes('_test.') ||
+            base.endsWith('.test.js') ||
+            base.endsWith('.test.ts') ||
+            base.endsWith('.spec.js') ||
+            base.endsWith('.spec.ts') ||
+            base.endsWith('_test.py') ||
+            base.endsWith('_test.go') ||
+            base.startsWith('test_') ||
+            lower.includes('/tests/') ||
+            lower.includes('/test/fixtures/')
         );
     }
 
