@@ -8,6 +8,8 @@
 
 import { readdirSync, readFileSync, statSync } from 'fs';
 import { join, relative, extname } from 'path';
+import { execSync } from 'child_process';
+import vm from 'vm';
 
 // Supported file extensions mapped to languages
 const EXTENSION_MAP = {
@@ -58,7 +60,13 @@ export class RepoAnalyzer {
 
                 if (!language || !content.trim()) continue;
 
-                // Run AST analysis
+                // STEP A: Syntax check — try to parse the file
+                const syntaxErrors = this._checkSyntax(content, language, filePath);
+                for (const se of syntaxErrors) {
+                    allIssues.push(se);
+                }
+
+                // STEP B: Run AST/regex analysis
                 const result = await this.astEngine.analyze(content, filePath, {
                     categories: ['security', 'best-practice', 'style', 'naming', 'performance'],
                 });
@@ -299,5 +307,64 @@ export class RepoAnalyzer {
         }
 
         return violations;
+    }
+
+    /**
+     * Check for syntax errors by attempting to parse the file
+     * JS/TS: uses Node's vm.compileFunction()
+     * Python: uses python -c "import ast; ast.parse(...)"
+     */
+    _checkSyntax(content, language, filePath) {
+        const errors = [];
+
+        if (language === 'javascript' || language === 'typescript') {
+            try {
+                // Strip hashbang if present
+                const code = content.replace(/^#!.*\n/, '\n');
+                // Try to compile — throws SyntaxError if invalid
+                new vm.Script(code, { filename: filePath });
+            } catch (err) {
+                if (err instanceof SyntaxError) {
+                    // Extract line number from error stack
+                    const lineMatch = err.stack?.match(/:([0-9]+)/);
+                    const line = lineMatch ? parseInt(lineMatch[1], 10) : 0;
+                    errors.push({
+                        file: filePath,
+                        line,
+                        bug_type: 'SYNTAX',
+                        description: `SyntaxError: ${err.message}`,
+                        code_snippet: this._extractSnippet(content, line),
+                        severity: 'CRITICAL',
+                        rule: 'syntax-check',
+                    });
+                }
+            }
+        }
+
+        if (language === 'python') {
+            try {
+                const escaped = content.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                const cmd = `python -c "import ast; ast.parse('''${escaped}''')" 2>&1`;
+                execSync(cmd, { timeout: 5000, encoding: 'utf-8' });
+            } catch (err) {
+                const output = (err.stdout || err.stderr || err.message || '').toString();
+                const lineMatch = output.match(/line\s+(\d+)/i);
+                const line = lineMatch ? parseInt(lineMatch[1], 10) : 0;
+                // Extract the actual error message
+                const msgMatch = output.match(/SyntaxError:\s*(.+)/i);
+                const msg = msgMatch ? msgMatch[1].trim() : 'Invalid syntax';
+                errors.push({
+                    file: filePath,
+                    line,
+                    bug_type: 'SYNTAX',
+                    description: `SyntaxError: ${msg}`,
+                    code_snippet: this._extractSnippet(content, line),
+                    severity: 'CRITICAL',
+                    rule: 'syntax-check',
+                });
+            }
+        }
+
+        return errors;
     }
 }
