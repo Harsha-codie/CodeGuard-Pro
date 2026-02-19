@@ -192,7 +192,9 @@ codeguard-pro/
 - PostgreSQL database (or Supabase account)
 - GitHub App credentials
 
-### Steps
+> 📘 **For detailed step-by-step setup instructions**, including how to create GitHub Apps, configure webhooks with Smee.io, and troubleshoot common issues, see the [SETUP.md](SETUP.md) guide.
+
+### Quick Start
 
 ```bash
 # 1. Clone the repository
