@@ -13,7 +13,7 @@ import { TestRunner } from './test-runner';
 import { RepoAnalyzer } from './analyzer';
 import { FixAgent } from './agents/fix-agent';
 import { CIAgent } from './agents/ci-agent';
-import { Orchestrator } from './agents/orchestrator';
+import { buildHealingGraph } from './agents/langgraph-orchestrator';
 import { BranchManager } from './branch-manager';
 import { PRCreator } from './pr-creator';
 
@@ -128,32 +128,39 @@ export class RepoHealerEngine {
             await this.branchManager.createBranch(this.branchName, defaultBranch);
             this._emit('branch', { message: `Branch ${this.branchName} created` });
 
-            // STEP 5 — Multi-Agent Fix Loop (Orchestrator)
-            this._emit('fix', { message: 'Starting multi-agent fix orchestration...' });
+            // STEP 5 — LangGraph Multi-Agent Orchestration
+            this._emit('fix', { message: 'Starting LangGraph multi-agent orchestration...' });
             this.fixAgent = new FixAgent();
             this.ciAgent = new CIAgent(this.owner, this.repo, installationId);
             this.prCreator = new PRCreator(this.owner, this.repo, installationId);
 
-            this.orchestrator = new Orchestrator({
-                fixAgent: this.fixAgent,
-                ciAgent: this.ciAgent,
-                branchManager: this.branchManager,
-                prCreator: this.prCreator,
-                branchName: this.branchName,
-                defaultBranch,
-                maxRetries: 5,
-                onProgress: (data) => this._emit('orchestrator', data),
+            // Build and invoke the LangGraph state graph
+            const healingGraph = buildHealingGraph();
+
+            const graphResult = await healingGraph.invoke({
+                repo_url: this.repoUrl,
+                team_name: this.teamName,
+                leader_name: this.leaderName,
+                default_branch: defaultBranch,
+                ai_branch: this.branchName,
+                installation_id: installationId,
+                issues: allIssues,
+                _services: {
+                    fixAgent: this.fixAgent,
+                    ciAgent: this.ciAgent,
+                    branchManager: this.branchManager,
+                    prCreator: this.prCreator,
+                    onProgress: (data) => this._emit('orchestrator', data),
+                },
             });
 
-            const orchestrationResult = await this.orchestrator.run(allIssues);
-
-            // Update results
-            this.results.total_fixes_applied = orchestrationResult.fixesApplied;
-            this.results.final_ci_status = orchestrationResult.ciStatus;
-            this.results.retry_count = orchestrationResult.retryCount;
-            this.results.pr_url = orchestrationResult.prUrl;
-            this.results.fixes = orchestrationResult.fixes;
-            this.results.ci_timeline = orchestrationResult.ciTimeline;
+            // Update results from graph final state
+            this.results.total_fixes_applied = graphResult.fixes_applied.filter(f => f.status === 'applied').length;
+            this.results.final_ci_status = graphResult.ci_status;
+            this.results.retry_count = graphResult.retry_count;
+            this.results.pr_url = graphResult.pr_url;
+            this.results.fixes = graphResult.fixes_applied;
+            this.results.ci_timeline = graphResult.ci_timeline;
 
             this.results.execution_time = Date.now() - this.startTime;
 
