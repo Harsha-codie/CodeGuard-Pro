@@ -91,7 +91,7 @@ const categoryConfig = {
     NAMING: { icon: Icons.naming, label: 'Naming Conventions', color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.1)' },
     STYLE: { icon: Icons.style, label: 'Code Style', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.1)' },
     BEST_PRACTICE: { icon: Icons.bestPractice, label: 'Best Practices', color: '#10b981', bg: 'rgba(16, 185, 129, 0.1)' },
-    PERFORMANCE: { icon: Icons.performance, label: 'Performance', color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.1)' },
+    PERFORMANCE: { icon: Icons.performance, label: 'Performance', color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.1)' },
     ACCESSIBILITY: { icon: Icons.accessibility, label: 'Accessibility', color: '#ec4899', bg: 'rgba(236, 72, 153, 0.1)' }
 };
 
@@ -242,25 +242,26 @@ export default function RuleTemplatesPage() {
     }
 
     return (
-        <div style={{ paddingBottom: '100px' }}>
+        <div style={{ paddingBottom: '140px', maxWidth: '1400px' }}>
             {/* Header */}
-            <div style={{ marginBottom: '32px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+            <div style={{ marginBottom: '40px', animation: 'fadeInUp 0.5s ease-out' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '12px' }}>
                     <div style={{
-                        width: '40px',
-                        height: '40px',
-                        borderRadius: '12px',
-                        background: 'linear-gradient(135deg, var(--accent) 0%, #8b5cf6 100%)',
+                        width: '56px',
+                        height: '56px',
+                        borderRadius: '16px',
+                        background: 'linear-gradient(135deg, var(--accent-primary) 0%, #8b5cf6 100%)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        color: 'white'
+                        color: 'white',
+                        boxShadow: '0 4px 14px rgba(99, 102, 241, 0.35)',
                     }}>
                         {Icons.style}
                     </div>
-                    <h1 style={{ margin: 0, fontSize: '28px', fontWeight: '700' }}>Rule Templates</h1>
+                    <h1 style={{ margin: 0, fontSize: '2.5rem', fontWeight: '700', letterSpacing: '-0.02em' }}>Rule Templates</h1>
                 </div>
-                <p style={{ color: 'var(--text-muted)', fontSize: '15px', maxWidth: '600px' }}>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '1.125rem', maxWidth: '650px', lineHeight: '1.6' }}>
                     Choose from 50 industry-standard compliance rules. Pre-validated queries ensure accurate detection.
                 </p>
             </div>
@@ -268,9 +269,9 @@ export default function RuleTemplatesPage() {
             {/* Stats Cards */}
             <div style={{ 
                 display: 'grid', 
-                gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', 
-                gap: '12px',
-                marginBottom: '24px'
+                gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', 
+                gap: '16px',
+                marginBottom: '32px'
             }}>
                 {Object.entries(categoryConfig).map(([key, config]) => {
                     const count = templates.filter(t => t.category === key).length;
@@ -279,18 +280,18 @@ export default function RuleTemplatesPage() {
                             key={key}
                             onClick={() => setSelectedCategory(selectedCategory === key ? 'ALL' : key)}
                             style={{
-                                padding: '16px',
-                                borderRadius: '12px',
-                                border: selectedCategory === key ? `2px solid ${config.color}` : '1px solid var(--border)',
-                                background: selectedCategory === key ? config.bg : 'var(--card)',
+                                padding: '20px',
+                                borderRadius: '16px',
+                                border: selectedCategory === key ? `2px solid ${config.color}` : '1px solid var(--border-color)',
+                                background: selectedCategory === key ? config.bg : 'var(--bg-card)',
                                 cursor: 'pointer',
                                 textAlign: 'left',
-                                transition: 'all 0.2s ease'
+                                transition: 'all 0.25s ease'
                             }}
                         >
-                            <div style={{ color: config.color, marginBottom: '8px' }}>{config.icon}</div>
-                            <div style={{ fontSize: '24px', fontWeight: '700', color: 'var(--text)' }}>{count}</div>
-                            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>{config.label}</div>
+                            <div style={{ color: config.color, marginBottom: '12px' }}>{config.icon}</div>
+                            <div style={{ fontSize: '2rem', fontWeight: '700', color: 'var(--text-primary)' }}>{count}</div>
+                            <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginTop: '4px', fontWeight: '500' }}>{config.label}</div>
                         </button>
                     );
                 })}
@@ -299,24 +300,24 @@ export default function RuleTemplatesPage() {
             {/* Search & Filters */}
             <div style={{ 
                 display: 'flex', 
-                gap: '12px', 
-                marginBottom: '24px',
+                gap: '16px', 
+                marginBottom: '32px',
                 flexWrap: 'wrap',
                 alignItems: 'center',
-                padding: '16px',
-                background: 'var(--card)',
-                borderRadius: '12px',
-                border: '1px solid var(--border)'
+                padding: '20px',
+                background: 'var(--bg-card)',
+                borderRadius: '16px',
+                border: '1px solid var(--border-color)'
             }}>
                 {/* Search */}
                 <div style={{ 
                     position: 'relative', 
                     flex: '1',
-                    minWidth: '250px'
+                    minWidth: '280px'
                 }}>
                     <div style={{
                         position: 'absolute',
-                        left: '14px',
+                        left: '16px',
                         top: '50%',
                         transform: 'translateY(-50%)',
                         color: 'var(--text-muted)'
@@ -330,21 +331,21 @@ export default function RuleTemplatesPage() {
                         onChange={(e) => setSearchQuery(e.target.value)}
                         style={{
                             width: '100%',
-                            padding: '12px 16px 12px 44px',
-                            borderRadius: '8px',
-                            border: '1px solid var(--border)',
-                            background: 'var(--bg)',
-                            color: 'var(--text)',
-                            fontSize: '14px',
+                            padding: '14px 18px 14px 48px',
+                            borderRadius: '12px',
+                            border: '1px solid var(--border-color)',
+                            background: 'var(--bg-secondary)',
+                            color: 'var(--text-primary)',
+                            fontSize: '1rem',
                             outline: 'none'
                         }}
                     />
                 </div>
 
                 {/* Language Filter */}
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                    <span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Language:</span>
-                    <div style={{ display: 'flex', gap: '4px' }}>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    <span style={{ color: 'var(--text-muted)', fontSize: '0.9375rem', fontWeight: '500' }}>Language:</span>
+                    <div style={{ display: 'flex', gap: '6px' }}>
                         {['all', 'javascript', 'typescript', 'python', 'java'].map(lang => (
                             <button
                                 key={lang}
@@ -654,55 +655,59 @@ export default function RuleTemplatesPage() {
                 </div>
             )}
 
-            {/* Floating Action Bar */}
+            {/* Floating Action Bar - Enhanced */}
             {selectedTemplates.length > 0 && (
                 <div style={{
                     position: 'fixed',
-                    bottom: '24px',
+                    bottom: '32px',
                     left: '50%',
                     transform: 'translateX(-50%)',
-                    padding: '12px 20px',
-                    borderRadius: '16px',
-                    background: 'var(--card)',
-                    border: '1px solid var(--border)',
-                    boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+                    padding: '20px 32px',
+                    borderRadius: '20px',
+                    background: 'linear-gradient(145deg, var(--bg-card) 0%, var(--bg-tertiary) 100%)',
+                    border: '1px solid var(--border-color)',
+                    boxShadow: '0 12px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(99, 102, 241, 0.1)',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '16px',
+                    gap: '24px',
                     zIndex: 100,
-                    backdropFilter: 'blur(10px)'
+                    backdropFilter: 'blur(12px)',
+                    animation: 'slideUp 0.3s ease-out',
                 }}>
                     <div style={{
-                        width: '40px',
-                        height: '40px',
-                        borderRadius: '10px',
-                        background: 'var(--accent)',
+                        width: '56px',
+                        height: '56px',
+                        borderRadius: '14px',
+                        background: 'linear-gradient(135deg, var(--accent-primary) 0%, #8b5cf6 100%)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         color: 'white',
                         fontWeight: '700',
-                        fontSize: '16px'
+                        fontSize: '1.5rem',
+                        boxShadow: '0 4px 14px rgba(99, 102, 241, 0.4)',
                     }}>
                         {selectedTemplates.length}
                     </div>
-                    <span style={{ fontWeight: '500', color: 'var(--text)' }}>
+                    <span style={{ fontWeight: '600', color: 'var(--text-primary)', fontSize: '1.125rem' }}>
                         rules selected
                     </span>
-                    <div style={{ width: '1px', height: '24px', background: 'var(--border)' }} />
+                    <div style={{ width: '1px', height: '32px', background: 'var(--border-color)' }} />
                     <button
                         onClick={() => setSelectedTemplates([])}
                         style={{
-                            padding: '10px 16px',
-                            borderRadius: '8px',
-                            border: '1px solid var(--border)',
+                            padding: '14px 20px',
+                            borderRadius: '12px',
+                            border: '1px solid var(--border-color)',
                             background: 'transparent',
-                            color: 'var(--text-muted)',
+                            color: 'var(--text-secondary)',
                             cursor: 'pointer',
-                            fontWeight: '500',
+                            fontWeight: '600',
+                            fontSize: '1rem',
                             display: 'flex',
                             alignItems: 'center',
-                            gap: '6px'
+                            gap: '8px',
+                            transition: 'all 0.2s ease',
                         }}
                     >
                         {Icons.close} Clear
@@ -710,23 +715,32 @@ export default function RuleTemplatesPage() {
                     <button
                         onClick={handleApplySelected}
                         style={{
-                            padding: '10px 24px',
-                            borderRadius: '8px',
+                            padding: '16px 32px',
+                            borderRadius: '12px',
                             border: 'none',
-                            background: 'linear-gradient(135deg, var(--accent) 0%, #8b5cf6 100%)',
+                            background: 'linear-gradient(135deg, var(--accent-primary) 0%, #8b5cf6 100%)',
                             color: 'white',
-                            fontWeight: '600',
+                            fontWeight: '700',
+                            fontSize: '1.0625rem',
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
-                            gap: '8px',
-                            boxShadow: '0 4px 12px rgba(99, 102, 241, 0.4)'
+                            gap: '10px',
+                            boxShadow: '0 6px 20px rgba(99, 102, 241, 0.45)',
+                            transition: 'all 0.2s ease',
                         }}
                     >
                         Apply to Project {Icons.arrowRight}
                     </button>
                 </div>
             )}
+            
+            <style jsx>{`
+                @keyframes slideUp {
+                    from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+                    to { opacity: 1; transform: translateX(-50%) translateY(0); }
+                }
+            `}</style>
         </div>
     );
 }

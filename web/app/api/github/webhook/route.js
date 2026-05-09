@@ -1016,7 +1016,7 @@ function extractPatternsFromQuery(query) {
 export async function POST(request) {
     try {
         // Rate limiting: 30 requests/minute per IP
-        const limited = rateLimitStrict(request);
+        const limited = await rateLimitStrict(request);
         if (limited) return limited;
 
         const signature = request.headers.get('x-hub-signature-256');

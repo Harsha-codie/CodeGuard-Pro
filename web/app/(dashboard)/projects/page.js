@@ -2,31 +2,31 @@
 
 import { useState, useEffect } from 'react';
 
-// Icons
+// Icons - Larger sizes
 const Icons = {
     plus: (
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M12 5v14"/><path d="M5 12h14"/>
         </svg>
     ),
     close: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
         </svg>
     ),
     github: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
             <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
         </svg>
     ),
     delete: (
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="3 6 5 6 21 6"/>
             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
         </svg>
     ),
     rules: (
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
             <polyline points="14 2 14 8 20 8"/>
             <line x1="16" y1="13" x2="8" y2="13"/>
@@ -34,10 +34,15 @@ const Icons = {
         </svg>
     ),
     external: (
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
             <polyline points="15 3 21 3 21 9"/>
             <line x1="10" y1="14" x2="21" y2="3"/>
+        </svg>
+    ),
+    folder: (
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
         </svg>
     )
 };
@@ -91,37 +96,150 @@ export default function ProjectsPage() {
     };
 
     return (
-        <div>
+        <div style={{ maxWidth: '1400px' }}>
             {/* Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
-                <div>
-                    <h1 style={{ marginBottom: '8px' }}>Connected Projects</h1>
-                    <p style={{ color: 'var(--text-muted)' }}>
-                        Repositories linked to your compliance monitoring.
-                    </p>
+            <div style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'flex-start', 
+                marginBottom: '40px',
+                animation: 'fadeInUp 0.5s ease-out',
+            }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
+                    <div style={{
+                        width: '56px',
+                        height: '56px',
+                        borderRadius: '14px',
+                        background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(139, 92, 246, 0.1))',
+                        border: '1px solid rgba(139, 92, 246, 0.3)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#8b5cf6',
+                        flexShrink: 0,
+                    }}>
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h1 style={{ 
+                            fontSize: '2.5rem', 
+                            fontWeight: '700', 
+                            marginBottom: '12px',
+                            letterSpacing: '-0.02em',
+                            background: 'linear-gradient(135deg, var(--text-primary) 0%, #8b5cf6 100%)',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                        }}>Connected Projects</h1>
+                        <p style={{ 
+                            fontSize: '1.125rem', 
+                            color: 'var(--text-secondary)',
+                            maxWidth: '500px',
+                        }}>
+                            Manage your GitHub repositories linked to compliance monitoring.
+                        </p>
+                    </div>
                 </div>
-                <button className="btn btn-primary" onClick={() => setShowAddModal(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button 
+                    className="btn btn-primary" 
+                    onClick={() => setShowAddModal(true)} 
+                    style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '10px',
+                        padding: '16px 28px',
+                        fontSize: '1.0625rem',
+                        background: 'linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%)',
+                        boxShadow: '0 4px 14px rgba(139, 92, 246, 0.35)',
+                    }}
+                >
                     {Icons.plus} Add Project
                 </button>
             </div>
 
             {/* Loading State */}
             {loading && (
-                <div style={{ textAlign: 'center', padding: '60px 20px' }}>
-                    <div style={{ width: '40px', height: '40px', border: '3px solid var(--border)', borderTopColor: 'var(--accent)', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 16px' }} />
-                    <p style={{ color: 'var(--text-muted)' }}>Loading projects...</p>
+                <div style={{ 
+                    textAlign: 'center', 
+                    padding: '80px 20px',
+                    animation: 'fadeIn 0.3s ease-out',
+                }}>
+                    <div style={{ 
+                        width: '56px', 
+                        height: '56px', 
+                        border: '3px solid var(--border-color)', 
+                        borderTopColor: 'var(--accent-primary)', 
+                        borderRadius: '50%', 
+                        animation: 'spin 1s linear infinite', 
+                        margin: '0 auto 24px' 
+                    }} />
+                    <p style={{ fontSize: '1.125rem', color: 'var(--text-muted)' }}>Loading projects...</p>
                 </div>
             )}
 
             {/* Empty State */}
             {!loading && projects.length === 0 && (
-                <div className="card" style={{ textAlign: 'center', padding: '60px 40px' }}>
-                    <div style={{ fontSize: '48px', marginBottom: '16px' }}>📁</div>
-                    <h2 style={{ marginBottom: '12px' }}>No projects yet</h2>
-                    <p style={{ color: 'var(--text-muted)', marginBottom: '24px', maxWidth: '400px', margin: '0 auto 24px' }}>
+                <div className="card" style={{ 
+                    textAlign: 'center', 
+                    padding: '80px 40px',
+                    background: 'linear-gradient(145deg, var(--bg-card) 0%, var(--bg-tertiary) 100%)',
+                    border: '1px dashed var(--border-color)',
+                    animation: 'fadeInUp 0.5s ease-out',
+                    position: 'relative',
+                    overflow: 'hidden',
+                }}>
+                    {/* Animated background gradient */}
+                    <div style={{
+                        position: 'absolute',
+                        top: '50%',
+                        left: '50%',
+                        width: '400px',
+                        height: '400px',
+                        background: 'radial-gradient(circle, rgba(139, 92, 246, 0.08) 0%, transparent 70%)',
+                        transform: 'translate(-50%, -50%)',
+                        animation: 'pulse 4s ease-in-out infinite',
+                    }} />
+                    
+                    <div style={{ 
+                        width: '100px', 
+                        height: '100px', 
+                        borderRadius: '50%',
+                        background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(139, 92, 246, 0.1))',
+                        border: '1px solid rgba(139, 92, 246, 0.3)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        margin: '0 auto 32px',
+                        animation: 'float 3s ease-in-out infinite',
+                        color: '#8b5cf6',
+                        position: 'relative',
+                    }}>
+                        {Icons.folder}
+                    </div>
+                    <h2 style={{ fontSize: '1.75rem', fontWeight: '600', marginBottom: '16px' }}>No projects yet</h2>
+                    <p style={{ 
+                        fontSize: '1.125rem',
+                        color: 'var(--text-muted)', 
+                        marginBottom: '32px', 
+                        maxWidth: '450px', 
+                        margin: '0 auto 32px',
+                        lineHeight: '1.7',
+                    }}>
                         Add a GitHub repository to start monitoring code compliance on pull requests.
                     </p>
-                    <button className="btn btn-primary" onClick={() => setShowAddModal(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                    <button 
+                        className="btn btn-primary" 
+                        onClick={() => setShowAddModal(true)} 
+                        style={{ 
+                            display: 'inline-flex', 
+                            alignItems: 'center', 
+                            gap: '12px',
+                            padding: '18px 36px',
+                            fontSize: '1.125rem',
+                            background: 'linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%)',
+                        }}
+                    >
                         {Icons.github} Add Your First Project
                     </button>
                 </div>
@@ -129,13 +247,18 @@ export default function ProjectsPage() {
 
             {/* Projects Grid */}
             {!loading && projects.length > 0 && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' }}>
-                    {projects.map((project) => (
+                <div style={{ 
+                    display: 'grid', 
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', 
+                    gap: '24px' 
+                }}>
+                    {projects.map((project, idx) => (
                         <ProjectCard 
                             key={project.id} 
                             project={project} 
                             onDelete={() => handleDeleteProject(project.id)}
                             deleting={deleting === project.id}
+                            delay={idx * 0.1}
                         />
                     ))}
                 </div>
@@ -149,12 +272,19 @@ export default function ProjectsPage() {
                 />
             )}
 
-            <style jsx>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+            <style jsx>{`
+                @keyframes spin { to { transform: rotate(360deg); } }
+                @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+                @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+                @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+                @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+                @keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+            `}</style>
         </div>
     );
 }
 
-function ProjectCard({ project, onDelete, deleting }) {
+function ProjectCard({ project, onDelete, deleting, delay = 0 }) {
     const timeAgo = (date) => {
         if (!date) return 'Never';
         const seconds = Math.floor((new Date() - new Date(date)) / 1000);
@@ -165,59 +295,119 @@ function ProjectCard({ project, onDelete, deleting }) {
     };
 
     return (
-        <div className="card" style={{ position: 'relative' }}>
+        <div className="card" style={{ 
+            position: 'relative',
+            padding: '28px',
+            animation: `fadeInUp 0.5s ease-out ${delay}s both`,
+            transition: 'all 0.3s ease',
+        }}>
             {/* Header */}
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '16px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '20px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    <div style={{ 
+                        width: '56px', 
+                        height: '56px', 
+                        borderRadius: '14px', 
+                        background: 'linear-gradient(135deg, var(--bg-tertiary) 0%, var(--bg-hover) 100%)',
+                        border: '1px solid var(--border-color)',
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center', 
+                        color: 'var(--text-secondary)' 
+                    }}>
                         {Icons.github}
                     </div>
                     <div>
-                        <h3 style={{ fontSize: '1rem', marginBottom: '2px' }}>{project.repoName}</h3>
-                        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{project.repoOwner}</p>
+                        <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '4px' }}>{project.repoName}</h3>
+                        <p style={{ fontSize: '0.9375rem', color: 'var(--text-muted)' }}>{project.repoOwner}</p>
                     </div>
                 </div>
                 <a 
                     href={project.repoUrl || `https://github.com/${project.repoOwner}/${project.repoName}`} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    style={{ color: 'var(--text-muted)', padding: '4px' }}
+                    style={{ 
+                        color: 'var(--text-muted)', 
+                        padding: '8px',
+                        borderRadius: '8px',
+                        transition: 'all 0.2s ease',
+                    }}
                     title="Open in GitHub"
+                    onMouseEnter={(e) => e.target.style.color = 'var(--accent-primary)'}
+                    onMouseLeave={(e) => e.target.style.color = 'var(--text-muted)'}
                 >
                     {Icons.external}
                 </a>
             </div>
 
             {/* Stats */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', paddingTop: '16px', borderTop: '1px solid var(--border-color)' }}>
+            <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: '1fr 1fr', 
+                gap: '20px', 
+                paddingTop: '20px', 
+                borderTop: '1px solid var(--border-color)' 
+            }}>
                 <div>
-                    <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Rules</p>
-                    <p style={{ fontSize: '1.25rem', fontWeight: '600' }}>{project.rulesCount || 0}</p>
+                    <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '6px', fontWeight: '500' }}>Rules</p>
+                    <p style={{ fontSize: '1.75rem', fontWeight: '700', color: 'var(--accent-primary)' }}>{project.rulesCount || 0}</p>
                 </div>
                 <div>
-                    <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Analyses</p>
-                    <p style={{ fontSize: '1.25rem', fontWeight: '600' }}>{project.analysisCount || 0}</p>
+                    <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '6px', fontWeight: '500' }}>Analyses</p>
+                    <p style={{ fontSize: '1.75rem', fontWeight: '700', color: 'var(--accent-success)' }}>{project.analysisCount || 0}</p>
                 </div>
             </div>
 
             {/* Footer */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--border-color)' }}>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+            <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'space-between', 
+                marginTop: '20px', 
+                paddingTop: '20px', 
+                borderTop: '1px solid var(--border-color)' 
+            }}>
+                <span style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
                     Added {timeAgo(project.createdAt)}
                 </span>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                    <a href={`/rules?projectId=${project.id}`} className="btn btn-secondary" style={{ padding: '6px 12px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                    <a 
+                        href={`/rules?projectId=${project.id}`} 
+                        className="btn btn-secondary" 
+                        style={{ 
+                            padding: '10px 18px', 
+                            fontSize: '0.9375rem', 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '8px' 
+                        }}
+                    >
                         {Icons.rules} Rules
                     </a>
                     <button 
                         onClick={onDelete} 
                         disabled={deleting}
-                        style={{ padding: '6px 10px', fontSize: '0.75rem', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '6px', cursor: deleting ? 'wait' : 'pointer', opacity: deleting ? 0.5 : 1 }}
+                        style={{ 
+                            padding: '10px 14px', 
+                            background: 'rgba(239, 68, 68, 0.1)', 
+                            color: '#ef4444', 
+                            border: '1px solid rgba(239, 68, 68, 0.3)', 
+                            borderRadius: '10px', 
+                            cursor: deleting ? 'wait' : 'pointer', 
+                            opacity: deleting ? 0.5 : 1,
+                            transition: 'all 0.2s ease',
+                        }}
+                        onMouseEnter={(e) => { if (!deleting) { e.target.style.background = 'rgba(239, 68, 68, 0.2)'; }}}
+                        onMouseLeave={(e) => { e.target.style.background = 'rgba(239, 68, 68, 0.1)'; }}
                     >
                         {Icons.delete}
                     </button>
                 </div>
             </div>
+            
+            <style jsx>{`
+                @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+            `}</style>
         </div>
     );
 }

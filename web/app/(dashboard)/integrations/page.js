@@ -59,13 +59,50 @@ export default function IntegrationsPage() {
     };
 
     return (
-        <div>
+        <div style={{ maxWidth: '1200px' }}>
             {/* Header */}
-            <div style={{ marginBottom: '32px' }}>
-                <h1 style={{ marginBottom: '8px' }}>Integrations</h1>
-                <p style={{ color: 'var(--text-muted)' }}>
-                    Connect your GitHub repositories for automated compliance checking.
-                </p>
+            <div style={{ 
+                marginBottom: '40px',
+                animation: 'fadeInUp 0.5s ease-out',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '16px',
+            }}>
+                <div style={{
+                    width: '56px',
+                    height: '56px',
+                    borderRadius: '14px',
+                    background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(139, 92, 246, 0.1))',
+                    border: '1px solid rgba(139, 92, 246, 0.3)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#8b5cf6',
+                    flexShrink: 0,
+                }}>
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="3"/>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                    </svg>
+                </div>
+                <div>
+                    <h1 style={{ 
+                        fontSize: '2.5rem', 
+                        fontWeight: '700', 
+                        marginBottom: '12px',
+                        letterSpacing: '-0.02em',
+                        background: 'linear-gradient(135deg, var(--text-primary) 0%, #8b5cf6 100%)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                    }}>Integrations</h1>
+                    <p style={{ 
+                        fontSize: '1.125rem',
+                        color: 'var(--text-secondary)',
+                        maxWidth: '600px',
+                    }}>
+                        Connect your GitHub repositories for automated compliance checking.
+                    </p>
+                </div>
             </div>
 
             {/* Success Banner */}
@@ -73,13 +110,28 @@ export default function IntegrationsPage() {
                 <div className="card" style={{ 
                     background: 'rgba(16, 185, 129, 0.1)', 
                     borderColor: 'rgba(16, 185, 129, 0.3)',
-                    marginBottom: '24px'
+                    marginBottom: '28px',
+                    padding: '24px',
+                    animation: 'fadeInUp 0.5s ease-out 0.1s both',
                 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <span style={{ fontSize: '1.5rem' }}>✓</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                        <div style={{
+                            width: '40px',
+                            height: '40px',
+                            borderRadius: '50%',
+                            background: 'rgba(16, 185, 129, 0.2)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#10b981',
+                        }}>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="20 6 9 17 4 12"/>
+                            </svg>
+                        </div>
                         <div>
-                            <strong style={{ color: 'var(--accent-success)' }}>GitHub App Installed Successfully!</strong>
-                            <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+                            <strong style={{ color: '#10b981', fontSize: '1.125rem' }}>GitHub App Installed Successfully!</strong>
+                            <p style={{ margin: '4px 0 0 0', color: 'var(--text-muted)', fontSize: '1rem' }}>
                                 Installation ID: {installationId}. Click "Sync Repositories" to import your repos.
                             </p>
                         </div>
@@ -89,15 +141,17 @@ export default function IntegrationsPage() {
 
             {/* GitHub App Status */}
             <div className="card" style={{ 
-                marginBottom: '24px',
+                marginBottom: '28px',
                 background: 'rgba(16, 185, 129, 0.1)', 
-                borderColor: 'rgba(16, 185, 129, 0.3)'
+                borderColor: 'rgba(16, 185, 129, 0.3)',
+                padding: '24px',
+                animation: 'fadeInUp 0.5s ease-out 0.2s both',
             }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <span style={{ fontSize: '1.25rem' }}>✅</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    <span style={{ fontSize: '1.5rem' }}>✅</span>
                     <div>
-                        <strong style={{ color: 'var(--accent-success)' }}>Webhook Active</strong>
-                        <p style={{ margin: '4px 0 0 0', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
+                        <strong style={{ color: 'var(--accent-success)', fontSize: '1.125rem' }}>Webhook Active</strong>
+                        <p style={{ margin: '6px 0 0 0', color: 'var(--text-secondary)', fontSize: '1rem' }}>
                             GitHub webhooks are configured and ready. PRs will be automatically analyzed when opened.
                         </p>
                     </div>
@@ -105,24 +159,28 @@ export default function IntegrationsPage() {
             </div>
 
             {/* GitHub Integration Card */}
-            <div className="card" style={{ marginBottom: '24px' }}>
+            <div className="card" style={{ 
+                marginBottom: '28px', 
+                padding: '32px',
+                animation: 'fadeInUp 0.5s ease-out 0.3s both',
+            }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+                    <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
                         <div style={{
-                            width: '48px',
-                            height: '48px',
+                            width: '64px',
+                            height: '64px',
                             background: 'var(--bg-tertiary)',
-                            borderRadius: '12px',
+                            borderRadius: '16px',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            fontSize: '1.5rem'
+                            fontSize: '2rem'
                         }}>
                             🐙
                         </div>
                         <div>
-                            <h3 style={{ marginBottom: '8px' }}>GitHub</h3>
-                            <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', maxWidth: '500px' }}>
+                            <h3 style={{ marginBottom: '10px', fontSize: '1.5rem', fontWeight: '600' }}>GitHub</h3>
+                            <p style={{ color: 'var(--text-secondary)', fontSize: '1rem', maxWidth: '550px', lineHeight: '1.6' }}>
                                 Install our GitHub App to automatically analyze pull requests. 
                                 The app will run compliance checks on every PR and report violations.
                             </p>
@@ -217,42 +275,48 @@ export default function IntegrationsPage() {
                     <div>
                         <div style={{ 
                             width: '40px', 
-                            height: '40px', 
+                            height: '48px', 
                             borderRadius: '50%', 
-                            background: 'var(--accent-primary)',
+                            background: 'linear-gradient(135deg, var(--accent-primary) 0%, #8b5cf6 100%)',
                             color: 'white',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             fontWeight: 'bold',
-                            marginBottom: '12px'
+                            fontSize: '1.125rem',
+                            marginBottom: '16px'
                         }}>2</div>
-                        <h4 style={{ marginBottom: '8px' }}>Configure Rules</h4>
-                        <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+                        <h4 style={{ marginBottom: '10px', fontSize: '1.125rem', fontWeight: '600' }}>Configure Rules</h4>
+                        <p style={{ color: 'var(--text-muted)', fontSize: '1rem', lineHeight: '1.6' }}>
                             Set up compliance rules for each project using templates or custom definitions.
                         </p>
                     </div>
                     
                     <div>
                         <div style={{ 
-                            width: '40px', 
-                            height: '40px', 
+                            width: '48px', 
+                            height: '48px', 
                             borderRadius: '50%', 
-                            background: 'var(--accent-primary)',
+                            background: 'linear-gradient(135deg, var(--accent-primary) 0%, #8b5cf6 100%)',
                             color: 'white',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             fontWeight: 'bold',
-                            marginBottom: '12px'
+                            fontSize: '1.125rem',
+                            marginBottom: '16px'
                         }}>3</div>
-                        <h4 style={{ marginBottom: '8px' }}>Automatic Checks</h4>
-                        <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+                        <h4 style={{ marginBottom: '10px', fontSize: '1.125rem', fontWeight: '600' }}>Automatic Checks</h4>
+                        <p style={{ color: 'var(--text-muted)', fontSize: '1rem', lineHeight: '1.6' }}>
                             PRs are automatically analyzed and violations are reported as comments.
                         </p>
                     </div>
                 </div>
             </div>
+            
+            <style jsx>{`
+                @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+            `}</style>
         </div>
     );
 }

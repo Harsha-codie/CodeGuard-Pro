@@ -321,6 +321,53 @@ compliance-system/
 | `NEXTAUTH_SECRET` | ✅ Yes | Random 32+ char string |
 | `GEMINI_API_KEY` | ❌ Optional | For AI rule generation |
 | `SLACK_WEBHOOK_URL` | ❌ Optional | Slack notifications |
+| `REDIS_HOST` | ❌ Optional | Redis host for queue/rate-limit |
+| `REDIS_PORT` | ❌ Optional | Redis port (default: 6379) |
+| `REDIS_PASSWORD` | ❌ Optional | Redis password |
+| `REDIS_URL` | ❌ Optional | Full Redis URL (alternative) |
+
+---
+
+## Optional: Redis Setup (Production)
+
+Redis enables distributed job queues and rate limiting. Without Redis, the system falls back to inline processing and in-memory rate limiting (works fine for single-instance deploys).
+
+### When to use Redis:
+- Multiple web server instances (load balancing)
+- High webhook volume (>100 PRs/hour)
+- Want background worker processing
+
+### Option A: Docker (Quickest)
+```bash
+docker run -d --name redis -p 6379:6379 redis:7-alpine
+```
+
+### Option B: Cloud Redis
+- **Upstash** (free tier): https://upstash.com/
+- **Railway**: https://railway.app/
+- **Redis Cloud**: https://redis.com/cloud/
+
+### Configuration
+Add to `.env`:
+```env
+# Option 1: Host/Port
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=your_password
+
+# Option 2: URL (for cloud services)
+REDIS_URL=redis://default:password@host:port
+```
+
+### Start Background Worker (with Redis)
+```bash
+cd worker
+npm install
+npm start
+```
+
+### Health Check
+Visit `/api/health` to see Redis and queue status.
 
 ---
 

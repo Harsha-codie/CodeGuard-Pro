@@ -137,32 +137,121 @@ export default function RepoHealPage() {
     const score = calculateScore(results);
 
     return (
-        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-            <h1 style={{ fontSize: '1.75rem', fontWeight: '700', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <span style={{
-                    width: '40px', height: '40px', borderRadius: '10px',
-                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: 'white', fontSize: '1.25rem',
-                }}>🤖</span>
-                Autonomous Repo Heal
-            </h1>
-            <p style={{ color: 'var(--text-muted)', marginBottom: '24px' }}>
-                AI-powered autonomous code healing agent — detects issues, generates fixes, and creates PRs automatically
-            </p>
+        <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+            {/* Hero Header with Description */}
+            <div style={{ 
+                marginBottom: '40px',
+                animation: 'fadeInUp 0.6s ease-out',
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '20px', marginBottom: '16px' }}>
+                    <div style={{
+                        width: '72px', 
+                        height: '72px', 
+                        borderRadius: '18px',
+                        background: 'linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%)',
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        boxShadow: '0 8px 24px rgba(139, 92, 246, 0.35)',
+                        animation: 'float 3s ease-in-out infinite',
+                        color: 'white',
+                    }}>
+                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h1 style={{ 
+                            fontSize: '2.75rem', 
+                            fontWeight: '700', 
+                            marginBottom: '8px',
+                            letterSpacing: '-0.02em',
+                            background: 'linear-gradient(135deg, var(--text-primary) 0%, #8b5cf6 100%)',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                        }}>Autonomous Repo Heal</h1>
+                        <p style={{ 
+                            color: 'var(--text-muted)', 
+                            fontSize: '1.125rem',
+                            maxWidth: '600px',
+                        }}>
+                            AI-powered autonomous code healing agent
+                        </p>
+                    </div>
+                </div>
+                
+                {/* Feature Description Cards */}
+                <div style={{ 
+                    display: 'grid', 
+                    gridTemplateColumns: 'repeat(4, 1fr)', 
+                    gap: '16px',
+                    marginTop: '28px',
+                }}>
+                    {[
+                        { icon: (<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>), title: 'Detect Issues', desc: 'Scans for linting, syntax, and logic errors', color: '#8b5cf6' },
+                        { icon: (<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>), title: 'Generate Fixes', desc: 'AI creates targeted fixes for each issue', color: '#a78bfa' },
+                        { icon: (<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>), title: 'Test & Verify', desc: 'Runs tests in Docker sandbox', color: '#22c55e' },
+                        { icon: (<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/></svg>), title: 'Create PR', desc: 'Submits fixes via pull request', color: '#8b5cf6' },
+                    ].map((item, idx) => (
+                        <div key={idx} style={{
+                            padding: '20px',
+                            background: 'var(--bg-secondary)',
+                            borderRadius: '14px',
+                            border: '1px solid var(--border-color)',
+                            animation: `fadeInUp 0.5s ease-out ${0.1 + idx * 0.1}s both`,
+                            transition: 'border-color 0.2s ease, transform 0.2s ease',
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.borderColor = item.color + '40'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border-color)'; e.currentTarget.style.transform = 'translateY(0)'; }}
+                        >
+                            <div style={{ 
+                                width: '40px',
+                                height: '40px',
+                                borderRadius: '10px',
+                                background: `linear-gradient(135deg, ${item.color}20, ${item.color}10)`,
+                                border: `1px solid ${item.color}30`,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: item.color,
+                                marginBottom: '12px',
+                            }}>{item.icon}</div>
+                            <h4 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '4px', color: 'var(--text-primary)' }}>{item.title}</h4>
+                            <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>{item.desc}</p>
+                        </div>
+                    ))}
+                </div>
+            </div>
 
             {/* ===== INPUT SECTION ===== */}
             <div style={{
-                background: 'var(--bg-secondary)', borderRadius: '12px', padding: '24px',
-                border: '1px solid var(--border-color)', marginBottom: '24px',
+                background: 'linear-gradient(145deg, var(--bg-card) 0%, var(--bg-tertiary) 100%)', 
+                borderRadius: '16px', 
+                padding: '32px',
+                border: '1px solid var(--border-color)', 
+                marginBottom: '32px',
+                animation: 'fadeInUp 0.5s ease-out 0.3s both',
             }}>
-                <h2 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '16px' }}>
-                    🚀 Run Healing Agent
+                <h2 style={{ 
+                    fontSize: '1.5rem', 
+                    fontWeight: '600', 
+                    marginBottom: '24px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                }}>
+                    <span style={{ fontSize: '1.25rem' }}>🚀</span> Run Healing Agent
                 </h2>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px', marginBottom: '24px' }}>
                     <div>
-                        <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '500', marginBottom: '6px', color: 'var(--text-muted)' }}>
+                        <label style={{ 
+                            display: 'block', 
+                            fontSize: '0.9375rem', 
+                            fontWeight: '600', 
+                            marginBottom: '10px', 
+                            color: 'var(--text-secondary)' 
+                        }}>
                             Repository URL
                         </label>
                         <input
@@ -172,15 +261,27 @@ export default function RepoHealPage() {
                             placeholder="https://github.com/owner/repo"
                             disabled={isRunning}
                             style={{
-                                width: '100%', padding: '10px 14px', borderRadius: '8px',
-                                border: '1px solid var(--border-color)', background: 'var(--bg-primary)',
-                                color: 'var(--text-primary)', fontSize: '0.9rem',
-                                outline: 'none', boxSizing: 'border-box',
+                                width: '100%', 
+                                padding: '14px 18px', 
+                                borderRadius: '12px',
+                                border: '1px solid var(--border-color)', 
+                                background: 'var(--bg-primary)',
+                                color: 'var(--text-primary)', 
+                                fontSize: '1rem',
+                                outline: 'none', 
+                                boxSizing: 'border-box',
+                                transition: 'border-color 0.2s ease',
                             }}
                         />
                     </div>
                     <div>
-                        <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '500', marginBottom: '6px', color: 'var(--text-muted)' }}>
+                        <label style={{ 
+                            display: 'block', 
+                            fontSize: '0.9375rem', 
+                            fontWeight: '600', 
+                            marginBottom: '10px', 
+                            color: 'var(--text-secondary)' 
+                        }}>
                             Team Name
                         </label>
                         <input
@@ -190,15 +291,27 @@ export default function RepoHealPage() {
                             placeholder="e.g., Rift Organisers"
                             disabled={isRunning}
                             style={{
-                                width: '100%', padding: '10px 14px', borderRadius: '8px',
-                                border: '1px solid var(--border-color)', background: 'var(--bg-primary)',
-                                color: 'var(--text-primary)', fontSize: '0.9rem',
-                                outline: 'none', boxSizing: 'border-box',
+                                width: '100%', 
+                                padding: '14px 18px', 
+                                borderRadius: '12px',
+                                border: '1px solid var(--border-color)', 
+                                background: 'var(--bg-primary)',
+                                color: 'var(--text-primary)', 
+                                fontSize: '1rem',
+                                outline: 'none', 
+                                boxSizing: 'border-box',
+                                transition: 'border-color 0.2s ease',
                             }}
                         />
                     </div>
                     <div>
-                        <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '500', marginBottom: '6px', color: 'var(--text-muted)' }}>
+                        <label style={{ 
+                            display: 'block', 
+                            fontSize: '0.9375rem', 
+                            fontWeight: '600', 
+                            marginBottom: '10px', 
+                            color: 'var(--text-secondary)' 
+                        }}>
                             Leader Name
                         </label>
                         <input
@@ -208,10 +321,16 @@ export default function RepoHealPage() {
                             placeholder="e.g., Saiyam Kumar"
                             disabled={isRunning}
                             style={{
-                                width: '100%', padding: '10px 14px', borderRadius: '8px',
-                                border: '1px solid var(--border-color)', background: 'var(--bg-primary)',
-                                color: 'var(--text-primary)', fontSize: '0.9rem',
-                                outline: 'none', boxSizing: 'border-box',
+                                width: '100%', 
+                                padding: '14px 18px', 
+                                borderRadius: '12px',
+                                border: '1px solid var(--border-color)', 
+                                background: 'var(--bg-primary)',
+                                color: 'var(--text-primary)', 
+                                fontSize: '1rem',
+                                outline: 'none', 
+                                boxSizing: 'border-box',
+                                transition: 'border-color 0.2s ease',
                             }}
                         />
                     </div>
@@ -220,8 +339,14 @@ export default function RepoHealPage() {
                 {/* Branch Preview */}
                 {teamName && leaderName && (
                     <div style={{
-                        padding: '8px 14px', borderRadius: '6px', marginBottom: '16px',
-                        background: '#1e293b', color: '#94a3b8', fontSize: '0.82rem', fontFamily: 'monospace',
+                        padding: '14px 18px', 
+                        borderRadius: '10px', 
+                        marginBottom: '24px',
+                        background: 'var(--bg-primary)', 
+                        border: '1px solid var(--border-color)',
+                        color: 'var(--text-secondary)', 
+                        fontSize: '0.9375rem', 
+                        fontFamily: 'var(--font-mono)',
                     }}>
                         Branch: <span style={{ color: '#10b981', fontWeight: '600' }}>
                             {`${teamName.toUpperCase().replace(/[^A-Z0-9\s]/g, '').replace(/\s+/g, '_')}_${leaderName.toUpperCase().replace(/[^A-Z0-9\s]/g, '').replace(/\s+/g, '_')}_AI_Fix`}
@@ -233,11 +358,19 @@ export default function RepoHealPage() {
                     onClick={handleRunAgent}
                     disabled={isRunning || !repoUrl || !teamName || !leaderName}
                     style={{
-                        padding: '12px 32px', borderRadius: '8px', border: 'none',
+                        padding: '16px 40px', 
+                        borderRadius: '12px', 
+                        border: 'none',
                         background: isRunning ? '#6b7280' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                        color: 'white', fontWeight: '600', fontSize: '0.95rem',
+                        color: 'white', 
+                        fontWeight: '700', 
+                        fontSize: '1.0625rem',
                         cursor: isRunning ? 'not-allowed' : 'pointer',
-                        display: 'flex', alignItems: 'center', gap: '8px',
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '10px',
+                        boxShadow: isRunning ? 'none' : '0 6px 20px rgba(16, 185, 129, 0.4)',
+                        transition: 'all 0.25s ease',
                     }}
                 >
                     {isRunning ? (
@@ -246,15 +379,22 @@ export default function RepoHealPage() {
                             Running Agent...
                         </>
                     ) : (
-                        <>🤖 Run Agent</>
+                        <>🤖 Run Healing Agent</>
                     )}
                 </button>
 
                 {error && (
                     <div style={{
-                        marginTop: '12px', padding: '12px 16px', borderRadius: '8px',
-                        background: '#fee2e2', color: '#991b1b', fontSize: '0.9rem',
-                        border: '1px solid #fca5a5',
+                        marginTop: '16px', 
+                        padding: '16px 20px', 
+                        borderRadius: '12px',
+                        background: 'rgba(239, 68, 68, 0.1)', 
+                        color: '#ef4444', 
+                        fontSize: '1rem',
+                        border: '1px solid rgba(239, 68, 68, 0.3)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px',
                     }}>
                         ❌ {error}
                     </div>
@@ -325,7 +465,7 @@ export default function RepoHealPage() {
                                     rel="noopener noreferrer"
                                     style={{
                                         display: 'inline-block', marginTop: '16px', padding: '8px 20px',
-                                        borderRadius: '8px', background: '#6366f1', color: 'white',
+                                        borderRadius: '8px', background: '#8b5cf6', color: 'white',
                                         textDecoration: 'none', fontWeight: '500', fontSize: '0.9rem',
                                     }}
                                 >
@@ -363,11 +503,11 @@ export default function RepoHealPage() {
                             </div>
 
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                <ScoreRow label="Base Score" value={score.base} color="#6366f1" />
+                                <ScoreRow label="Base Score" value={score.base} color="#8b5cf6" />
                                 <ScoreRow label="Speed Bonus" value={score.speedBonus > 0 ? `+${score.speedBonus}` : '0'} color="#10b981" />
                                 <ScoreRow label="Efficiency Penalty" value={score.efficiencyPenalty} color="#ef4444" />
                                 <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '10px' }}>
-                                    <ScoreRow label="Final Score" value={score.final} color="#6366f1" bold />
+                                    <ScoreRow label="Final Score" value={score.final} color="#8b5cf6" bold />
                                 </div>
                             </div>
                         </div>
@@ -474,6 +614,22 @@ export default function RepoHealPage() {
                 @keyframes spin {
                     from { transform: rotate(0deg); }
                     to { transform: rotate(360deg); }
+                }
+                @keyframes fadeIn {
+                    from { opacity: 0; }
+                    to { opacity: 1; }
+                }
+                @keyframes fadeInUp {
+                    from { opacity: 0; transform: translateY(20px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                @keyframes float {
+                    0%, 100% { transform: translateY(0); }
+                    50% { transform: translateY(-8px); }
+                }
+                @keyframes pulse {
+                    0%, 100% { opacity: 1; }
+                    50% { opacity: 0.6; }
                 }
             `}</style>
         </div>

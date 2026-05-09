@@ -5,9 +5,9 @@ export default function DashboardLayout({ children }) {
         <div style={{ display: 'flex', minHeight: '100vh' }}>
             <Sidebar />
             <main style={{
-                marginLeft: '260px',
+                marginLeft: '280px',
                 flex: 1,
-                padding: '32px',
+                padding: '40px',
                 background: 'var(--bg-primary)',
             }}>
                 {children}
